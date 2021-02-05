@@ -1,0 +1,167 @@
+#!/bin/bash
+SDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+source $SDIR/jh_config
+# Purpose: Wrapper Script to start singularity IF USED
+# This script receives all command line arguments from the batchspawner at JupyterHub side to start a single user notebook (e.g. gpu batchspawner-singleuser --ip=0.0.0.0 --disable_terminal=True --notebook-dir=/notebooks/)
+# $container_to_start_* is a path to the main singularity container (not overlay). This can be changed in the config file jh_config.
+
+### EXPORT ENVIRONMENT VARIABLES FOR JUPYTER NOTEBOOK
+function setup_singularity_env () {
+
+	# These variables will be need to build a SSH tunnel from the compute node to the JupyterHub server
+	export SSH_TUNNEL_USER=$ssh_tunnel_user_jh
+	export SSH_JUPYTERHUB_IP=$ssh_jh_ip
+	export SSH_PRIV_KEY=$ssh_priv_key
+	export SSH_TUNNEL_API=$ssh_tunnel_api
+	export SSH_TUNNEL_API_PORT=$ssh_tunnel_api_port
+
+	# more information here: https://jupyter.readthedocs.io/en/latest/projects/jupyter-directories.html
+	export JUPYTER_DATA_DIR=/userhome/.local/share/jupyter/
+	export JUPYTER_CONFIG_DIR=/userhome/.local/share/jupyter/
+	export JUPYTER_RUNTIME_DIR=/userhome/.runtime/
+	# singularity will bind host filesystems to a specific path specified in jh_config
+	export SINGULARITY_BIND=$singularity_bind
+	# This URL will be used by the notebook servers
+	export JUPYTERHUB_API_URL=$external_hub_url
+	# pip/3 is using this as tmp dir. Otherwise pip fails with: no space left on device
+	export TMPDIR=/opt/
+}
+
+function mount_WebDAV () {
+
+	if $enable_webdav; then
+		if [[ -f $webdav_command ]]; then
+			# create WebDAV directory as mount destination
+			mkdir -p $webdav_mount_dir
+			# MOUNT
+			LD_LIBRARY_PATH=$scratch_dir/WDFS/libs/ PATH=$PATH:$scratch_dir/WDFS/ $scratch_dir/WDFS/wdfs $WDURL $webdav_mount_dir -o auto_unmount -o username=$WDUN -o password=$WDT
+
+			if [[ ! $? -eq 0 ]]; then
+				>&2 echo "Could not authenticate to webdav server. Please check your login credentials"
+				unset -v WDURL WDUN WDT
+				return 2
+			fi
+			# unset after successfully mount
+			unset -v WDURL WDUN WDT
+			return 0
+		else
+			create_log_entry "ERROR" "Could not find WebDAV Command. Not mounting it..."
+			unset -v WDURL WDUN WDT
+		fi
+	else
+		create_log_entry "DEBUG" "Not mounting WebDAV. It's disabled in the config file jh_config"
+	fi
+}
+
+### RUN SINGULARITY CONTAINER FOR COMPUTE NODE
+function run_compute_container () {
+
+	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on compute node..."
+	if $use_singularity; then
+		if $enable_debug_mode; then
+			if ! $creating_user_homes; then
+				singularity --verbose exec -c --no-mount hostfs --writable-tmpfs $container_to_start_compute "${@:2}" 2>&1
+			else
+				singularity --verbose exec -c --no-mount hostfs --overlay $overlay_location $container_to_start_compute "${@:2}" 2>&1 | tee $user_log_directory/lastlog
+			fi
+		else
+			if ! $creating_user_homes; then
+				singularity exec -c --no-mount hostfs --writable-tmpfs $container_to_start_compute "${@:2}"
+			else
+				singularity exec -c --no-mount hostfs --overlay $overlay_location $container_to_start_compute "${@:2}"  &> $user_log_directory/lastlog
+			fi
+		fi
+
+		if [[ $? -eq 0 ]]; then
+			create_log_entry "INFO" "[Singularity] Singularity command for user $JUPYTERHUB_USER on host $(hostname) started!"
+		fi
+	else
+		"${@:2}"
+		
+		if [[ $? -eq 0 ]]; then
+			create_log_entry "INFO" "[Notebook Server] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
+		fi
+	fi
+}
+
+### RUN SINGULARITY CONTAINER FOR GPU NODE
+function run_gpu_container () {
+	
+	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on gpu node..."
+	export NVIDIA_VISIBLE_DEVICES=0
+	if $use_singularity; then
+
+		if $enable_debug_mode; then
+			if $creating_user_homes; then
+				singularity --verbose exec --nv --no-mount hostfs -c --overlay $overlay_location $container_to_start_gpu "${@:2}" 2>&1 | tee $user_log_directory/lastlog
+			else
+				singularity --verbose exec --nv -c --no-mount hostfs --writable-tmpfs $container_to_start_gpu "${@:2}" 2>&1 | tee $user_log_directory/lastlog
+			fi
+		else
+			singularity exec --nv -c --no-mount hostfs --overlay $overlay_location $container_to_start_gpu "${@:2}" &> $user_log_directory/lastlog
+			# The --nv option: https://sylabs.io/guides/3.5/user-guide/gpu.html
+		fi
+
+		if [[ $? -eq 0 ]]; then
+			create_log_entry "INFO" "[Singularity] Singularity command for user $JUPYTERHUB_USER on host $(hostname) started!"
+		fi
+	else
+		if $enable_debug_mode; then
+			"${@:2}" 2>&1 | tee $user_log_directory/lastlog
+		else
+			"${@:2}"
+		fi
+		
+		if [[ $? -eq 0 ]]; then
+			create_log_entry "INFO" "[Notebook Server] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
+		fi
+	fi
+}
+
+### PRE CONFIG 
+function pre_config () {
+
+	# loading singularity so that the singularity commands are available (no shit sherlock)	
+	if $use_singularity; then
+		${cmd_load_singularity[@]}
+		create_log_entry "DEBUG" "Loading singularity environment for user $JUPYTERHUB_USER ..."
+		test_singularity=$(which singularity)
+		if [[ ! $? -eq 0 ]]; then
+			create_log_entry "ERROR" "Using singularity but command singularity not found! See jh_config: cmd_load_singularity"
+			>&2 echo "Using singularity but command singularity not found! See jh_config: cmd_load_singularity"
+			exit 1
+		else
+			create_log_entry "DEBUG" "[Load Singularity] Successfully loaded singularity environment"
+		fi
+
+		if [[ ! -f $container_to_start_compute ]]; then
+			>&2 echo "The singularity container $container_to_start_compute does not exists! Maybe you want to build it?"
+			create_log_entry "ERROR" "The singularity container $container_to_start_compute does not exists! Maybe you want to build it?"
+			exit 1
+		fi
+	fi
+
+	# exporting environment variables for the Jupyter Notebook environment
+	setup_singularity_env
+
+	if [[ ! -z $WDURL ]] && [[ ! -z $WDUN ]] && [[ ! -z $WDT ]]; then
+		mount_WebDAV
+		if [[ $? == 2 ]]; then
+			echo "[WEBDAV] Could not authenticate to webdav server. Please check your login credentials" > $user_log_directory/webdav.err
+			echo "[WEBDAV] Could not authenticate to webdav server. Please check your login credentials" >> $user_log_directory/lastlog
+			create_log_entry "WARNING" "[WDFS] Login credentials for user $JUPYTERHUB_USER seems to be wrong."
+		else
+			create_log_entry "INFO" "[WEBDAV] (FUSE) Mounting WebDAV for user $JUPYTERHUB_USER"
+			# Singularity will then automatically bind the directory
+			export SINGULARITY_BIND=$SINGULARITY_BIND,$webdav_mount_dir:$webdav_mount_dir_container
+		fi
+	fi
+
+	if [[ $1 == "compute" ]]; then
+		run_compute_container "$@"
+	elif [[ $1 == "gpu" ]]; then
+		run_gpu_container "$@"
+	fi
+}
+
+pre_config "$@"

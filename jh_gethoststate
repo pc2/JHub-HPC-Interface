@@ -1,0 +1,14 @@
+#!/bin/bash
+SDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
+source $SDIR/jh_config
+# Purpose: This file will be used by the JupyterHub Server. Look at the CustomHPCSpawner in batchspwaner.py -> batch_query_cmd
+# The JupyterHub Server extracts the job status and the compute node hostname from following command:
+
+jobid=$1
+cmd_job_get_mapped_node+=("$jobid")
+cmd_job_state+=("$jobid")
+
+mapped_node=$(${cmd_job_get_mapped_node[@]} | ${cmd_job_get_mapped_node_filter[@]})
+job_state=$(${cmd_job_state[@]} | ${cmd_job_state_filter[@]})
+
+echo $mapped_node $job_state

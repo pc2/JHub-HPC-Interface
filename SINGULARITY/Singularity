@@ -1,0 +1,34 @@
+Bootstrap: docker
+From: debian
+
+%post
+    
+    USER_UID=77478
+
+    ##### BASE INSTALLATION #####
+    apt update
+    apt install -y python3 python3-pip git curl nodejs npm build-essential vim
+    python3 -m pip install notebook batchspawner jupyterhub jupyterlab
+
+    ##### ENABLE EXTENSIONS #####
+    jupyter serverextension enable jupyterlab
+
+    ##### NEW DIRECTORIES #####
+    # Useful if unknown users want to use the JupyterHub
+    mkdir /notebooks/
+    mkdir /userhome/
+
+    ##### SET DIRECTORIES TO UID WHO RUNS THE CONTAINER #####
+    chown -R $USER_UID /notebooks/
+    chown -R $USER_UID /opt/
+    chown -R $USER_UID /userhome/
+    chown -R $USER_UID /usr/
+
+    ##### GLOBAL JUPYTER CONFIG FILE #####
+    mkdir -p /etc/jupyter/
+    touch /etc/jupyter/jupyter_notebook_config.py
+    echo "c.NotebookApp.notebook_dir='/notebooks'" > /etc/jupyter/jupyter_notebook_config.py
+
+##### ENVIRONMENT VARIABLES AT START TIME
+%environment
+    export HOME=/userhome/

@@ -1,0 +1,136 @@
+# Purpose: Configuration file for jupyterhub wrapper scripts (jh_startjob, jh_killjob, ...). This file will be sourced by wrapper scripts starting with jh_*
+# Info: In case of a change no service has to be restarted, because the configuration file is re-read when the wrapper scripts are started.
+
+######## MAINTENANCE MODE #######
+is_cluster_in_maintenance=false
+
+# Only following user can start a job if maintenance is active
+maintenance_only_user="mwi"
+##################################
+
+######## GENERAL PROJECT INFORMATION ########
+scratch_dir=/scratch/hpc-lco-jupyter 
+external_hub_url="http://127.0.0.1:8083/hub/api"
+############################################
+
+####### WORKLOAD MANAGER CONFIGURATION #######	
+# If you do not need a filter (pipe) just type `cat` in it. 
+cmd_run_job=(ccsalloc --quiet --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog)
+cmd_run_job_debug=(ccsalloc --quiet --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr)
+# cmd_run_job_filter will be applied on cmd_run_job and cmd_run_job_debug
+cmd_run_job_filter=(cat)
+
+cmd_kill_job=(ccskill)
+
+cmd_job_owner=(ccsinfo -s --mine --raw --fmt=%N $1)
+cmd_job_owner_filter=(cat)
+
+cmd_job_batchfile=(ccsinfo -s --mine --raw --fmt=%b $1)
+cmd_job_batchfile_filter=(cut -d " " -f2)
+
+# The output of cmd_job_state should only cotain the job state
+cmd_job_state=(ccsinfo -s --mine --raw --fmt=%w $1)
+cmd_job_state_filter=(cat)
+
+cmd_job_get_mapped_node=(ccsinfo -s --mine --raw --fmt=%m $1)
+cmd_job_get_mapped_node_filter=(grep -o "^node[0-9][0-9]-[0-9][0-9][0-9]\|^gpu[0-9][0-9][0-9]")
+
+cluster_job_is_running=(ALLOCATED ALLOCATING)
+cluster_job_is_stopped=(STOPPED STOPPING)
+cluster_job_is_planned=(PLANNED PLANNING)
+
+job_environment_job_id="$CCS_REQID"
+##############################################
+
+####### DATABASE CONFIGURATION ########
+use_accounting=true
+sqlite_database_file=$scratch_dir/jh_database.db
+
+####### SSH TUNNEL CONFIGURATION #######
+ssh_tunnel_api=true
+ssh_tunnel_api_port=8083
+ssh_tunnel_user_jh=tunnelbot
+ssh_jh_ip=194.13.83.158
+ssh_priv_key=$(cat ~/.ssh/id_rsa)
+
+# Location of user home directories (can be changed, but why?)
+creating_user_homes=true
+home_dir=$scratch_dir/HOME_DIRECTORIES
+user_home_dir=$home_dir/$JUPYTERHUB_USER/
+user_log_directory=$user_home_dir/JupyterHub-Log/
+
+# SINGULARITY OPTIONS
+# syntax: --bind "SOURCE:DEST:OPTS" (COMMA SEPERATED)
+use_singularity=true
+singularity_bind_fix="$scratch_dir/jh_batchspawner_singleuser_replace:/opt/batchspawner/batchspawner/singleuser.py:ro,$scratch_dir/jh_starttunnel:/opt/.jh_starttunnel:ro"
+singularity_bind_extra="$user_log_directory:/notebooks/JupyterHub-Log/:ro,/scratch/hpc-lco-jupyter/NBGRADER/exchange:/srv/nbgrader/exchange/,$scratch_dir/NBGRADER/courses:/srv/nbgrader/courses/,$scratch_dir/NBGRADER/global_config/nbgrader_config.py:/usr/local/etc/jupyter/nbgrader_config.py:ro"
+singularity_bind="$singularity_bind_fix,$singularity_bind_extra"
+
+# Size of overlay image for singularity and user space (Megabytes)
+# That means that the user has $overlay_size MB space, to configure his environment
+overlay_size=6144
+overlay_location=$home_dir/$JUPYTERHUB_USER/overlay.img
+create_overlay_cmd=(dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_size)
+create_ext3_overlay_cmd=($scratch_dir/e2fsprogs/e2fsprogs-217c0bdf17899c0f79b73f76feeadd6d55863180/misc/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location)
+
+# set which container directory should start for a specific note type (e.g. compute or gpu node)
+container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc.sif
+container_to_start_gpu=$scratch_dir/SINGULARITY/jupyterhub_hpc_gpu.sif
+
+# enable debug mode
+# more output at jhlog 
+enable_debug_mode=true
+
+# enable logging in $log_dir directory
+enable_logging=true
+log_dir=$scratch_dir/log
+
+# if $log_dir does not exists, create it
+[[ ! -d $log_dir ]] && [[ $enable_logging ]] && mkdir -p $log_dir
+
+# singularity version that will be used to start container
+cmd_load_singularity=(module load singularity)
+
+# WebDAV
+enable_webdav=true
+webdav_command=$scratch_dir/WDFS/wdfs
+webdav_mount_dir=$user_home_dir/WebDAV-Share/
+webdav_mount_dir_container=/notebooks/WebDAV-Share/
+
+# syntax e.g. : create_log_entry "WARNING" "message content"
+# Logging Function
+
+logging_save_date_fmt="+%d%m%Y" 
+
+function create_log_entry () {
+
+	if $enable_logging; then
+		current_date=$(date $logging_save_date_fmt)
+		if [[ ! -f $log_dir/$current_date ]]; then 
+			touch $log_dir/$current_date
+		fi
+
+		if [[ $1 == "INFO" ]]; then
+			# Green
+			logfmt="\e[32m["$1"]\e[39m[$(date)]: "$2""
+			echo -e $logfmt >> $log_dir/$current_date
+		elif [[ $1 == "DEBUG" ]]; then
+			if [[ $enable_debug_mode == true ]]; then
+				# Cyan
+				logfmt="\e[36m["$1"]\e[39m[$(date)]: "$2""
+				echo -e $logfmt >> $log_dir/$current_date
+			fi
+		elif [[ $1 == "WARNING" ]]; then
+			# Light Yellow
+			logfmt="\e[93m["$1"]\e[39m[$(date)]: "$2""
+			echo -e $logfmt >> $log_dir/$current_date
+		elif [[ $1 == "ERROR" ]]; then
+			# Red
+			logfmt="\e[31m["$1"]\e[39m[$(date)]: "$2""
+			echo -e $logfmt >> $log_dir/$current_date
+		else
+			logfmt="["$1"][$(date)]: "$2""
+			echo -e $logfmt >> $log_dir/$current_date
+		fi
+	fi
+}
