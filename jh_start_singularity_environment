@@ -16,15 +16,17 @@ function setup_singularity_env () {
 	export SSH_TUNNEL_API_PORT=$ssh_tunnel_api_port
 
 	# more information here: https://jupyter.readthedocs.io/en/latest/projects/jupyter-directories.html
-	export JUPYTER_DATA_DIR=/userhome/.local/share/jupyter/
-	export JUPYTER_CONFIG_DIR=/userhome/.local/share/jupyter/
-	export JUPYTER_RUNTIME_DIR=/userhome/.runtime/
+	export JUPYTER_DATA_DIR=$singularity_home_dir/.local/share/jupyter/
+	export JUPYTER_CONFIG_DIR=$singularity_home_dir/.local/share/jupyter/
+	export JUPYTER_RUNTIME_DIR=$singularity_home_dir/.runtime/
 	# singularity will bind host filesystems to a specific path specified in jh_config
 	export SINGULARITY_BIND=$singularity_bind
 	# This URL will be used by the notebook servers
 	export JUPYTERHUB_API_URL=$external_hub_url
 	# pip/3 is using this as tmp dir. Otherwise pip fails with: no space left on device
-	export TMPDIR=/opt/
+    if $use_singularity; then
+	    export TMPDIR=/opt/
+    fi
 }
 
 function mount_WebDAV () {
@@ -53,34 +55,38 @@ function mount_WebDAV () {
 	fi
 }
 
-### RUN SINGULARITY CONTAINER FOR COMPUTE NODE
 function run_compute_container () {
 
 	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on compute node..."
-	if $use_singularity; then
-		if $enable_debug_mode; then
-			if ! $creating_user_homes; then
-				singularity --verbose exec -c --no-mount hostfs --writable-tmpfs $container_to_start_compute "${@:2}" 2>&1
-			else
-				singularity --verbose exec -c --no-mount hostfs --overlay $overlay_location $container_to_start_compute "${@:2}" 2>&1 | tee $user_log_directory/lastlog
-			fi
-		else
-			if ! $creating_user_homes; then
-				singularity exec -c --no-mount hostfs --writable-tmpfs $container_to_start_compute "${@:2}"
-			else
-				singularity exec -c --no-mount hostfs --overlay $overlay_location $container_to_start_compute "${@:2}"  &> $user_log_directory/lastlog
-			fi
-		fi
-
-		if [[ $? -eq 0 ]]; then
-			create_log_entry "INFO" "[Singularity] Singularity command for user $JUPYTERHUB_USER on host $(hostname) started!"
-		fi
-	else
-		"${@:2}"
-		
-		if [[ $? -eq 0 ]]; then
-			create_log_entry "INFO" "[Notebook Server] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
-		fi
+    build_cmd=()
+    if $use_singularity; then
+        if $enable_debug_mode; then
+            build_cmd+=(singularity --verbose exec)
+        else
+            build_cmd+=(singularity exec)
+        fi
+        if [[ -n $singularity_home_dir ]]; then
+            build_cmd+=(--home $singularity_home_dir)
+        fi
+        if [[ -n $singularity_no_mount ]]; then
+            build_cmd+=(--no-mount $singularity_no_mount)
+        fi
+        if $creating_user_homes; then
+            build_cmd+=(--overlay $overlay_location)
+        fi
+        if [[ -n $singularity_extra_args ]]; then
+            build_cmd+=($singularity_extra_args)
+        fi
+        build_cmd+=($container_to_start_compute ${@:2})
+    else
+        build_cmd+=(${@:2})
+    fi
+   
+    echo ${build_cmd[@]} > $scratch_dir/THATISJUSTABUILDTEST
+    ${build_cmd[@]}
+    
+	if [[ $? -eq 0 ]]; then
+		create_log_entry "INFO" "[Jupyter Notebook] Notebook server  for user $JUPYTERHUB_USER on host $(hostname) started!"
 	fi
 }
 
@@ -89,32 +95,35 @@ function run_gpu_container () {
 	
 	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on gpu node..."
 	export NVIDIA_VISIBLE_DEVICES=0
-	if $use_singularity; then
+    build_cmd=()
+    if $use_singularity; then
+        if $enable_debug_mode; then
+            build_cmd+=(singularity --verbose exec --nv)
+        else
+            build_cmd+=(singularity exec --nv)
+        fi
+        if [[ -n $singularity_home_dir ]]; then
+            build_cmd+=(--home $singularity_home_dir)
+        fi
+        if [[ -n $singularity_no_mount ]]; then
+            build_cmd+=(--no-mount $singularity_no_mount)
+        fi
+        if $creating_user_homes; then
+            build_cmd+=(--overlay $overlay_location)
+        fi
+        if [[ -n $singularity_extra_args ]]; then
+            build_cmd+=($singularity_extra_args)
+        fi
+        build_cmd+=($container_to_start_gpu ${@:2})
+    else
+        build_cmd+=(${@:2})
+    fi
+   
+    echo ${build_cmd[@]} > $scratch_dir/THATISJUSTABUILDTEST
+    ${build_cmd[@]}
 
-		if $enable_debug_mode; then
-			if $creating_user_homes; then
-				singularity --verbose exec --nv --no-mount hostfs -c --overlay $overlay_location $container_to_start_gpu "${@:2}" 2>&1 | tee $user_log_directory/lastlog
-			else
-				singularity --verbose exec --nv -c --no-mount hostfs --writable-tmpfs $container_to_start_gpu "${@:2}" 2>&1 | tee $user_log_directory/lastlog
-			fi
-		else
-			singularity exec --nv -c --no-mount hostfs --overlay $overlay_location $container_to_start_gpu "${@:2}" &> $user_log_directory/lastlog
-			# The --nv option: https://sylabs.io/guides/3.5/user-guide/gpu.html
-		fi
-
-		if [[ $? -eq 0 ]]; then
-			create_log_entry "INFO" "[Singularity] Singularity command for user $JUPYTERHUB_USER on host $(hostname) started!"
-		fi
-	else
-		if $enable_debug_mode; then
-			"${@:2}" 2>&1 | tee $user_log_directory/lastlog
-		else
-			"${@:2}"
-		fi
-		
-		if [[ $? -eq 0 ]]; then
-			create_log_entry "INFO" "[Notebook Server] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
-		fi
+	if [[ $? -eq 0 ]]; then
+		create_log_entry "INFO" "[Jupyter Notebook] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
 	fi
 }
 

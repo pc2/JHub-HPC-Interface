@@ -162,6 +162,9 @@ If you are using another workload manager, you can configure _jh_config_ manuall
 | `create_ext3_overlay_cmd` | Command to make the overlay as ext3 filesystem. |
 | `container_to_start_compute` | Path of the container which should be started on a regular compute node |
 | `container_to_start_gpu` | Path of the container which should be started on a GPU node | 
+| `singularity_no_mount` | Comma-seperated list of which singularity should not mount when calling singularity (--no-mount) |
+| `singularity_home_dir` |  $HOME-Directory inside the singularity container. (--home) |
+| `singularity_extra_args` | Extra arguments that will be passed to the singularity call |
 | `enable_debug_mode` | enable `$cmd_run_job_debug` and prints DEBUG logs in `$log_dir` | 
 | `enable_logging` | If true, all wrapper scripts creates log information in regular files named `$logging_save_date_fmt` |
 | `log_dir` | Path of the log directory - Default: `$scratch_dir`_/log/_ |

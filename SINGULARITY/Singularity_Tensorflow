@@ -14,7 +14,6 @@ From: tensorflow/tensorflow:latest-gpu
     jupyter serverextension enable jupyterlab
 
     ##### NEW DIRECTORIES #####
-    # Useful if unknown users want to use the JupyterHub
     mkdir /notebooks/
     mkdir /userhome/
 
@@ -28,7 +27,3 @@ From: tensorflow/tensorflow:latest-gpu
     mkdir -p /etc/jupyter/
     touch /etc/jupyter/jupyter_notebook_config.py
     echo "c.NotebookApp.notebook_dir='/notebooks'" > /etc/jupyter/jupyter_notebook_config.py
-
-##### ENVIRONMENT VARIABLES AT START TIME
-%environment
-    export HOME=/userhome/

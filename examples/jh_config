@@ -62,6 +62,10 @@ singularity_bind_fix="$scratch_dir/jh_batchspawner_singleuser_replace:/opt/batch
 singularity_bind_extra=""
 singularity_bind="$singularity_bind_fix,$singularity_bind_extra"
 
+singularity_no_mount=""
+singularity_home_dir=""
+singularity_extra_args=""
+
 # Size of overlay image for singularity and user space (Megabytes)
 # That means that the user has $overlay_size MB space, to configure his environment
 overlay_size=2048

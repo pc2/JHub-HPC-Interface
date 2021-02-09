@@ -66,6 +66,10 @@ singularity_bind_fix="$scratch_dir/jh_batchspawner_singleuser_replace:/opt/batch
 singularity_bind_extra="$user_log_directory:/notebooks/JupyterHub-Log/:ro,/scratch/hpc-lco-jupyter/NBGRADER/exchange:/srv/nbgrader/exchange/,$scratch_dir/NBGRADER/courses:/srv/nbgrader/courses/,$scratch_dir/NBGRADER/global_config/nbgrader_config.py:/usr/local/etc/jupyter/nbgrader_config.py:ro"
 singularity_bind="$singularity_bind_fix,$singularity_bind_extra"
 
+singularity_no_mount="hostfs,home"
+singularity_home_dir="/userhome/"
+singularity_extra_args=""
+
 # Size of overlay image for singularity and user space (Megabytes)
 # That means that the user has $overlay_size MB space, to configure his environment
 overlay_size=6144
@@ -74,7 +78,7 @@ create_overlay_cmd=(dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_si
 create_ext3_overlay_cmd=($scratch_dir/e2fsprogs/e2fsprogs-217c0bdf17899c0f79b73f76feeadd6d55863180/misc/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location)
 
 # set which container directory should start for a specific note type (e.g. compute or gpu node)
-container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc.sif
+container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc_new.sif
 container_to_start_gpu=$scratch_dir/SINGULARITY/jupyterhub_hpc_gpu.sif
 
 # enable debug mode

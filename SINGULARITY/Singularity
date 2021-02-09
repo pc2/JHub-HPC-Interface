@@ -7,14 +7,10 @@ From: debian
 
     ##### BASE INSTALLATION #####
     apt update
-    apt install -y python3 python3-pip git curl nodejs npm build-essential vim
-    python3 -m pip install notebook batchspawner jupyterhub jupyterlab
-
-    ##### ENABLE EXTENSIONS #####
-    jupyter serverextension enable jupyterlab
+    apt install -y python3 python3-pip vim
+    python3 -m pip install notebook batchspawner jupyterhub
 
     ##### NEW DIRECTORIES #####
-    # Useful if unknown users want to use the JupyterHub
     mkdir /notebooks/
     mkdir /userhome/
 
@@ -28,7 +24,3 @@ From: debian
     mkdir -p /etc/jupyter/
     touch /etc/jupyter/jupyter_notebook_config.py
     echo "c.NotebookApp.notebook_dir='/notebooks'" > /etc/jupyter/jupyter_notebook_config.py
-
-##### ENVIRONMENT VARIABLES AT START TIME
-%environment
-    export HOME=/userhome/
