@@ -1,0 +1,60 @@
+---
+- name: JupyterHub Deployment
+  hosts: jupyterhub_server
+  remote_user: ansiblebot
+  become: yes
+  become_method: sudo
+
+  tasks:
+
+##### Prepare System #####
+
+  - name: Apt update
+    apt:
+      force_apt_get: yes # apt-get instead of aptitude
+      update_cache: yes # apt-get update
+      #upgrade: yes # apt-get upgrade
+
+##### Install JupyterHub #####
+
+  - name: Installing JupyterHub
+    include: install_jupyterhub.yaml
+
+##### Install Batchspawner #####
+
+  - name: Installing Batchspawner
+    include: install_batchspawner.yaml
+
+##### Configuration #####
+
+  - name: Mapping HPC node names
+    script: "./map_hpc-nodenames.sh"
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Copy JupyterHub config
+    copy:
+      src: "./config_files/jupyterhub_config.py"
+      dest: "/opt/jupyterhub/etc/jupyterhub/"
+      force: yes
+
+  - name: Copy Batchspawner config
+    copy:
+      src: "./config_files/batchspawner.py"
+      dest: "/opt/jupyterhub/batchspawner/batchspawner/"
+      force: yes
+
+##### Finish deployment #####
+
+  - name: Restart jupyterhub service
+    systemd:
+      state: restarted
+      name: jupyterhub.service
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  #- meta: end_play # exit playbook immediately

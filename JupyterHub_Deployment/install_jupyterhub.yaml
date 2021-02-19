@@ -1,0 +1,162 @@
+# This Ansible tasklist installs JupyterHub from the ground up. It follows the instructions found in the official documentation (https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html). This tasklist will not install JupyterLab.
+
+  - name: Installing JupyterHub - Step 1
+    apt:
+      name: python3-pip
+      state: present
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 2
+    apt:
+      name: python3-venv
+      state: present
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 3
+    shell: python3 -m venv /opt/jupyterhub/
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 4
+    shell: /opt/jupyterhub/bin/python3 -m pip install wheel
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 5
+    shell: /opt/jupyterhub/bin/python3 -m pip install jupyterhub
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 6
+    shell: /opt/jupyterhub/bin/python3 -m pip install ipywidgets
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 7
+    apt:
+      name: nodejs
+      state: present
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 8
+    apt:
+      name: npm
+      state: present
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 9
+    npm:
+      name: configurable-http-proxy
+      global: yes # -g
+      state: present
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 10
+    file:
+      path: /opt/jupyterhub/etc/jupyterhub/
+      state: directory
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 11.1
+    stat:
+      path: /opt/jupyterhub/etc/jupyterhub/jupyterhub_config.py
+    register: jhub_config_file
+
+  - name: Installing JupyterHub - Step 11.2
+    shell: /opt/jupyterhub/bin/jupyterhub --generate-config
+    args:
+      chdir: /opt/jupyterhub/etc/jupyterhub/
+    when: not jhub_config_file.stat.exists
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 12
+    file:
+      path: /opt/jupyterhub/etc/systemd
+      state: directory
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 13
+    shell: |
+      echo '[Unit]
+      Description=JupyterHub
+      After=syslog.target network.target
+
+      [Service]
+      User=root
+      Environment="PATH=/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/opt/jupyterhub/bin"
+      ExecStart=/opt/jupyterhub/bin/jupyterhub -f /opt/jupyterhub/etc/jupyterhub/jupyterhub_config.py
+
+      [Install]
+      WantedBy=multi-user.target' > /opt/jupyterhub/etc/systemd/jupyterhub.service
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 14
+    file:
+      src: /opt/jupyterhub/etc/systemd/jupyterhub.service
+      dest: /etc/systemd/system/jupyterhub.service
+      state: link
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 15
+    systemd:
+      daemon_reload: yes
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 16
+    systemd:
+      name: jupyterhub.service
+      enabled: yes
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
+
+  - name: Installing JupyterHub - Step 17
+    systemd:
+      state: started
+      name: jupyterhub.service
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
