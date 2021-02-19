@@ -1,6 +1,12 @@
 # JupyterHub + High-Performance Computing
 
-High-Perfmormance Jupyter Notebooks
+*High performance Jupyter Notebooks*
+
+The aim of this project is to connect JupyterHub to a high-performance computer (HPC). By automatically outsourcing the computations to the HPC system, even complex calculations are possible. While JupyterHub is deployed on a regular server, the notebooks themselves are spawned and run on the remote HPC system.
+
+**Motivation**
+
+The technical core of this project is the transparent integration of digital worksheets (Jupyter notebooks), in which learning content and programs can be displayed, edited and executed on the students' own laptops, with current cloud and high-performance computing (HPC) technologies. This provides the conditions for innovative, digital teaching that encourages independent and interactive development of, for example, data science applications, without imposing the complexity of using a high-performance computer system on the students. Instead, particularly computationally and data-intensive calculations are automatically offloaded to a high-performance computer, enabling even sophisticated analyses to be performed that would otherwise not be feasible on students' laptops.
 
 ---
 
