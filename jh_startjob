@@ -110,13 +110,15 @@ function check_started_job () {
 
 # Start job 
 function run_wlm_job () {
-	
+
+    # mark the job file as executable
 	chmod 700 $WRAP_TMP_JOB
+
 	if $creating_user_homes; then
 		[[ ! -d $user_log_directory ]] && mkdir $user_log_directory
 	fi
-	# timeout: Sometimes the workload manager is b0rken
-	if [[ $enable_debug_mode == true ]]; then
+
+	if $enable_debug_mode; then
 		cmd_run_job_debug+=("$WRAP_TMP_JOB")
 		JOBID_OUTPUT=$(${cmd_run_job_debug[@]} | ${cmd_run_job_filter[@]})
 	else
@@ -131,16 +133,22 @@ function run_wlm_job () {
 		exit 1
 	fi
 
-	create_log_entry "DEBUG" "WORKLOAD MANAGER OUTPUT: ${JOBID_OUTPUT}"
+	create_log_entry "DEBUG" "[Workload Manager] Output: ${JOBID_OUTPUT}"
 
 	# write job id to output -> Used by the JupyterHub to control the job
 	# After output, the JupyterHub Server extracts the Job ID with the method: parse_job_id . See class CustomHPCSpawner
-	JOBID_OUTPUT=$(echo $JOBID_OUTPUT | grep -o '[[:digit:]]*')
+	JOBID_OUTPUT=$(echo $JOBID_OUTPUT | grep -Po "\\d+")
+
+    if [[ ! $? -eq 0 ]]; then
+        create_log_entry "ERROR" "Cannot filter a digit from job allocation output."
+    fi
 
 	# check whether output is zero 0
 	if [[ "$JOBID_OUTPUT" -eq "0" ]]; then
 		create_log_entry "ERROR" "JOBID_OUTPUT is zero??? Kill the job."
 		>&2 echo "Cannot extract Job ID. Please try again."
+        sleep 5
+        check_started_job
 	fi
 
 	echo $JOBID_OUTPUT
