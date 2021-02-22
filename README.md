@@ -50,7 +50,6 @@ The technical core of this project is the transparent integration of digital wor
 
 * User Accounting Information on HPC-Side
 * JupyterHub: Shibboleth Integration
-* New Singularity recipe based on user jovyan (https://jupyter.readthedocs.io/en/latest/community/content-community.html#what-is-a-jovyan)
 
 ## Installation JupyterHub Server
 
@@ -104,13 +103,18 @@ Singularity recipe examples are in the directory SINGULARITY/.
 
 #### Build Singularity Container
 
-1. Change the UID in the recipe file
-2. Build container:
+The following commands replace USER_ID in the recipes to the output of `id -u`, creates a new hidden file, and builds the singularity container with the new created file.
  
+##### Compute
+
 ```bash
-cd SINGULARITY
-singularity build --remote compute_jupyter.sif Singularity
-singularity build --remote gpu_jupyter.sif Singularity_Tensorflow
+USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < SINGULARITY/Singularity > SINGULARITY/.recipefile_compute && singularity build --remote SINGULARITY/compute_jupyter.sif SINGULARITY/.recipefile_compute
+```
+
+##### GPU (Tensorflow)
+
+```bash
+USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < SINGULARITY/Singularity_Tensorflow > SINGULARITY/.recipefile_gpu && singularity build --remote SINGULARITY/gpu_jupyter.sif SINGULARITY/.recipefile_gpu
 ```
 
 _singularity build help section_:
@@ -278,21 +282,10 @@ To create an exchange directory for every user, just create an empty directory i
 
 ### Changing the Student ID to the JupyterHub logged in user name
 
-You have to change following code lines:
+Since the containers run as user jovyan, the value from the `$JUPYTERHUB_USER` variable is automatically used.
 
-__*.../nbgrader/utils.py*__
-
-```diff
--def get_username():
--    """ Get the username, use os user name but override if username is jovyan ."""
--    osname = get_osusername()
--    if osname == 'jovyan':
--        return os.environ.get('JUPYTERHUB_USER', 'jovyan')
--    else:
--        return osname
-+ def get_username():
-+     return os.environ["JUPYTERHUB_USER"];
-```
+See here for more information: 
+https://jupyter.readthedocs.io/en/latest/community/content-community.html#what-is-a-jovyan
 
 ### Create nbgrader_config.py
 

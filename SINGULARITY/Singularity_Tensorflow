@@ -2,28 +2,42 @@ Bootstrap: docker
 From: tensorflow/tensorflow:latest-gpu
 
 %post
-    
-    USER_UID=77478
 
     ##### BASE INSTALLATION #####
     apt update
-    apt install -y python3 python3-pip git curl nodejs npm build-essential vim
-    python3 -m pip install notebook jupyterhub jupyterlab batchspawner
+    apt install -y python3 python3-pip vim libssl-dev git curl
+    export CRYPTOGRAPHY_DONT_BUILD_RUST=1
+    python3 -m pip install notebook jupyterhub jupyterlab
 
-    ##### ENABLE EXTENSIONS #####
+    ##### BATCHSPAWNER #####
+    latest_batchspawner_release=$(curl --silent "https://api.github.com/repos/jupyterhub/batchspawner/releases/latest" | grep tag_name | sed -E 's/.*"([^"]+)".*/\1/')
+    mkdir /opt/batchspawner/
+    git clone --depth 1 --branch $latest_batchspawner_release https://github.com/jupyterhub/batchspawner.git /opt/batchspawner/
+    pip3 install -e /opt/batchspawner/
+
+    ##### JUPYTERLAB #####
     jupyter serverextension enable jupyterlab
+
+    ##### JOVYAN USER #####
+    useradd -m -s /bin/bash -N -u USER_ID jovyan
+    usermod -aG users jovyan
 
     ##### NEW DIRECTORIES #####
     mkdir /notebooks/
     mkdir /userhome/
 
     ##### SET DIRECTORIES TO UID WHO RUNS THE CONTAINER #####
-    chown -R $USER_UID /notebooks/
-    chown -R $USER_UID /opt/
-    chown -R $USER_UID /userhome/
-    chown -R $USER_UID /usr/
+    chown jovyan /notebooks/
+    chown jovyan /opt/
+    chown jovyan /userhome/
+    chown -R jovyan /usr/
 
     ##### GLOBAL JUPYTER CONFIG FILE #####
     mkdir -p /etc/jupyter/
     touch /etc/jupyter/jupyter_notebook_config.py
     echo "c.NotebookApp.notebook_dir='/notebooks'" > /etc/jupyter/jupyter_notebook_config.py
+
+%environment
+    export NB_USER=jovyan
+    export NB_UID=USER_ID
+    export NB_GID=100
