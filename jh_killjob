@@ -1,26 +1,18 @@
 #!/bin/bash
 SDIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" > /dev/null 2>&1 && pwd)"
 source $SDIR/jh_config
-# Author: Marcel-Brian Wilkowsky
 # Purpose:
-# wrapper script to stop users job, move job stdout and stderr files to users job directory and umount WebDAV Share, if used.
-# The JupyterHub server calls this wrapper script. The job id of the user is in $i (transfers by the JupyterHub server extracted at start time)
+# wrapper script to stop users job.
+# The JupyterHub server calls this wrapper script. The job id of the user is in $1 (transfers by the JupyterHub server extracted at start time)
 
 # get information from given job $1
 jobid=$1
-#cmd_job_owner+=("$jobid")
 job_owner=$(${cmd_job_owner[@]})
 job_batch=$(${cmd_job_batchfile[@]} | ${cmd_job_batchfile_filter[@]})
-mapped_node=$(${cmd_job_get_mapped_node[@]} | ${cmd_job_get_mapped_node_filter[@]})
 
 function cleanup () {
-	
-	# Check if the WebDAV Directory exists. If yes, just delete it and umount WebDAV
-	webdavdir=$user_notebook_dir/WebDAV-Share/
-	[[ -d $webdavdir ]] && ssh $mapped_node fusermount -u $webdavdir && rmdir $webdavdir
 
 	rm $job_batch
-	rm $user_log_directory/lastlog
 
 	create_log_entry "DEBUG" "[KILL] Successfully cleaned up the home directory for user $job_owner"
 }
