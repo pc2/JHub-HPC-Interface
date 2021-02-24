@@ -12,22 +12,23 @@ job_batch=$(${cmd_job_batchfile[@]} | ${cmd_job_batchfile_filter[@]})
 
 function cleanup () {
 
+    [[ -d $webdav_mount_dir ]] && rmdir $webdav_mount_dir && create_log_entry "DEBUG" "[WEBDAV] Deleted WebDAV-Directory $webdav_mount_dir"
 	rm $job_batch
 
-	create_log_entry "DEBUG" "[KILL] Successfully cleaned up the home directory for user $job_owner"
+	create_log_entry "DEBUG" "[Kill] Successfully cleaned up the home directory for user $job_owner"
 }
 
 function stop_instance () {
 
-	create_log_entry "INFO" " [KILL] Stopping job for user $job_owner with ID $jobid ..."
-	create_log_entry "DEBUG" "[KILL] Now cleaning up the job directory for user $job_owner"
+	create_log_entry "INFO" " [Kill] Stopping job for user $job_owner with ID $jobid ..."
+	create_log_entry "DEBUG" "[Kill] Now cleaning up the job directory for user $job_owner"
 	cleanup
 
 	# Finally kill the job
 	cmd_kill_job+=("$jobid")
 	${cmd_kill_job[@]}
 
-	create_log_entry "DEBUG" "Job for user $job_owner with ID $jobid stopped!"	
+	create_log_entry "DEBUG" "[Kill] Job for user $job_owner with ID $jobid stopped!"	
 }
 
 stop_instance

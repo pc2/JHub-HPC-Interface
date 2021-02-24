@@ -179,7 +179,7 @@ If you are using another workload manager, you can configure _jh_config_ manuall
 | `enable_logging` | If true, all wrapper scripts creates log information in regular files named `$logging_save_date_fmt` |
 | `log_dir` | Path of the log directory - Default: `$scratch_dir`_/log/_ |
 | `cmd_load_singularity` | How to load singularity? So that the `singularity` command is available |
-| `enable_webdav` | If enabled,  _jh_start_singularity_environment_ mounts WebDAV on the host filesystem using `$webdav_command` and `$webdav_mount_dir` and extends the variable $SINGULARITY_BIND with `$webdav_mount_dir_container` |
+| `enable_webdav` | If enabled,  _jh_start_notebook_environment_ mounts WebDAV on the host filesystem using `$webdav_command` and `$webdav_mount_dir` and extends the variable $SINGULARITY_BIND with `$webdav_mount_dir_container` |
 | `webdav_command` | Command how to mount files/directories with the WebDAV Protocol |
 | `webdav_mount_dir` | Destination mountpoint outside of the container - Default: `$user_home_dir`_/WebDAV-Share/_ |
 | `webdav_mount_dir_container` | Destination mountpoint inside the container - Default: _/notebooks/WebDAV-Share/_ |
@@ -235,9 +235,9 @@ On the HPC system, wrapper scripts are used to execute and stop the job (`batch_
 
         1. export the WebDAV data (If used)
         2. check whether the overlay has already been __successfully__ created
-        3. call of 'jh_start_singularity_environment' with node type (GPU or compute node) as first argument $1
+        3. call of 'jh_start_notebook_environment' with node type (GPU or compute node) as first argument $1
 
-    * __*`jh_start_singularity_environment`*__:
+    * __*`jh_start_notebook_environment`*__:
 
         1. check if the first argument $1 contains __*gpu*__ or __*compute*__
         2. mount the WebDAV share to `$webdav_mount_dir_container`. (If used)

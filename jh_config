@@ -2,7 +2,7 @@
 # Info: In case of a change no service has to be restarted, because the configuration file is re-read when the wrapper scripts are started.
 
 ######## MAINTENANCE MODE #######
-is_cluster_in_maintenance=false
+is_cluster_in_maintenance=true
 
 # Only following user can start a job if maintenance is active
 maintenance_only_user="mwi"
@@ -15,8 +15,8 @@ external_hub_url="http://127.0.0.1:8083/hub/api"
 
 ####### WORKLOAD MANAGER CONFIGURATION #######	
 # If you do not need a filter (pipe) just type `cat` in it. 
-cmd_run_job=(ccsalloc --quiet --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog)
-cmd_run_job_debug=(ccsalloc --quiet --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr)
+cmd_run_job=(ccsalloc --quiet -g hpc-lco-jupyter --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog)
+cmd_run_job_debug=(ccsalloc --quiet -g hpc-lco-jupyter --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr)
 # cmd_run_job_filter will be applied on cmd_run_job and cmd_run_job_debug
 cmd_run_job_filter=(cat)
 
@@ -43,7 +43,7 @@ job_environment_job_id="$CCS_REQID"
 ##############################################
 
 ####### DATABASE CONFIGURATION ########
-use_accounting=true
+use_accounting=false
 sqlite_database_file=$scratch_dir/jh_database.db
 
 ####### SSH TUNNEL CONFIGURATION #######
@@ -75,10 +75,10 @@ singularity_extra_args=""
 overlay_size=6144
 overlay_location=$home_dir/$JUPYTERHUB_USER/overlay.img
 create_overlay_cmd=(dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_size)
-create_ext3_overlay_cmd=($scratch_dir/e2fsprogs/e2fsprogs-217c0bdf17899c0f79b73f76feeadd6d55863180/misc/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location)
+create_ext3_overlay_cmd=($scratch_dir/e2fsprogs/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location)
 
 # set which container directory should start for a specific note type (e.g. compute or gpu node)
-container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc_new.sif
+container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc_jovyan.sif
 container_to_start_gpu=$scratch_dir/SINGULARITY/jupyterhub_hpc_gpu.sif
 
 # enable debug mode
@@ -97,9 +97,16 @@ cmd_load_singularity=(module load singularity)
 
 # WebDAV
 enable_webdav=true
-webdav_command=$scratch_dir/WDFS/wdfs
-webdav_mount_dir=$user_home_dir/WebDAV-Share/
+webdav_mount_dir=$user_home_dir/webdav_mount/
 webdav_mount_dir_container=/notebooks/WebDAV-Share/
+## can be ignoried. The webdav variables will be passed to the wrapper script ja_start_singularity_environment to mount webdav
+_WDURL="$WDURL"
+_WDUN="$WDUN"
+_WDT="$WDT"
+##
+webdav_cmd=($scratch_dir/WDFS/wdfs)
+webdav_cmd_args=($_WDURL $webdav_mount_dir -o auto_unmount -o username=$_WDUN -o password=$_WDT)
+webdav_cmd_env=(LD_LIBRARY_PATH=$scratch_dir/WDFS/libs/ PATH=$PATH:$scratch_dir/WDFS/)
 
 # syntax e.g. : create_log_entry "WARNING" "message content"
 # Logging Function

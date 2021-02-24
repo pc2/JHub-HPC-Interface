@@ -5,8 +5,8 @@ source $SDIR/jh_config
 # This script receives all command line arguments from the batchspawner at JupyterHub side to start a single user notebook (e.g. gpu batchspawner-singleuser --ip=0.0.0.0 --disable_terminal=True --notebook-dir=/notebooks/)
 # $container_to_start_* is a path to the main singularity container (not overlay). This can be changed in the config file jh_config.
 
-### EXPORT ENVIRONMENT VARIABLES FOR JUPYTER NOTEBOOK
-function setup_singularity_env () {
+### EXPORT ENVIRONMENT VARIABLES FOR JUPYTER ENVIRONMENT
+function setup_environment () {
 
 	# These variables will be need to build a SSH tunnel from the compute node to the JupyterHub server
 	export SSH_TUNNEL_USER=$ssh_tunnel_user_jh
@@ -15,16 +15,17 @@ function setup_singularity_env () {
 	export SSH_TUNNEL_API=$ssh_tunnel_api
 	export SSH_TUNNEL_API_PORT=$ssh_tunnel_api_port
 
-	# more information here: https://jupyter.readthedocs.io/en/latest/projects/jupyter-directories.html
-	export JUPYTER_DATA_DIR=$singularity_home_dir/.local/share/jupyter/
-	export JUPYTER_CONFIG_DIR=$singularity_home_dir/.local/share/jupyter/
-	export JUPYTER_RUNTIME_DIR=$singularity_home_dir/.runtime/
-	# singularity will bind host filesystems to a specific path specified in jh_config
-	export SINGULARITY_BIND=$singularity_bind
-	# This URL will be used by the notebook servers
+	# This variable will be used by the notebook servers to connect to the JupyterHub API
 	export JUPYTERHUB_API_URL=$external_hub_url
-	# pip/3 is using this as tmp dir. Otherwise pip fails with: no space left on device
+
     if $use_singularity; then
+	    # more information here: https://jupyter.readthedocs.io/en/latest/projects/jupyter-directories.html
+    	export JUPYTER_DATA_DIR=$singularity_home_dir/.local/share/jupyter/
+    	export JUPYTER_CONFIG_DIR=$singularity_home_dir/.local/share/jupyter/
+    	export JUPYTER_RUNTIME_DIR=$singularity_home_dir/.runtime/
+    	# singularity will bind host filesystems to a specific path specified in jh_config
+        export SINGULARITY_BIND=$singularity_bind
+ 	    # pip/3 is using this as tmp dir. Otherwise pip fails with: no space left on device
 	    export TMPDIR=/opt/
     fi
 }
@@ -32,26 +33,31 @@ function setup_singularity_env () {
 function mount_WebDAV () {
 
 	if $enable_webdav; then
-		if [[ -f $webdav_command ]]; then
+		if [[ -f $webdav_cmd ]]; then
 			# create WebDAV directory as mount destination
 			mkdir -p $webdav_mount_dir
-			# MOUNT
-			LD_LIBRARY_PATH=$scratch_dir/WDFS/libs/ PATH=$PATH:$scratch_dir/WDFS/ $scratch_dir/WDFS/wdfs $WDURL $webdav_mount_dir -o auto_unmount -o username=$WDUN -o password=$WDT
-
+            # check if webdav url contains a '%40'
+            if [[ $WDURL == *"%40"* ]]; then
+                WDURL=$(sed "s/%40/@/" <<< $WDURL) 
+            fi
+			# mount on compute/gpu node
+            env - ${webdav_cmd_env[@]} ${webdav_cmd[@]} ${webdav_cmd_args[@]}
+            
 			if [[ ! $? -eq 0 ]]; then
 				>&2 echo "Could not authenticate to webdav server. Please check your login credentials"
 				unset -v WDURL WDUN WDT
+                create_log_entry "WARNING" "[WebDAV] WebDAV command failed. Ignoring it..." 
 				return 2
 			fi
 			# unset after successfully mount
 			unset -v WDURL WDUN WDT
 			return 0
 		else
-			create_log_entry "ERROR" "Could not find WebDAV Command. Not mounting it..."
+			create_log_entry "ERROR" "[WebDAV] Could not find WebDAV Command. Not mounting it..."
 			unset -v WDURL WDUN WDT
 		fi
 	else
-		create_log_entry "DEBUG" "Not mounting WebDAV. It's disabled in the config file jh_config"
+		create_log_entry "DEBUG" "[WebDAV] Not mounting WebDAV. It's disabled in the config file jh_config"
 	fi
 }
 
@@ -82,7 +88,6 @@ function run_compute_container () {
         build_cmd+=(${@:2})
     fi
    
-    echo ${build_cmd[@]} > $scratch_dir/THATISJUSTABUILDTEST
     ${build_cmd[@]}
     
 	if [[ $? -eq 0 ]]; then
@@ -119,7 +124,6 @@ function run_gpu_container () {
         build_cmd+=(${@:2})
     fi
    
-    echo ${build_cmd[@]} > $scratch_dir/THATISJUSTABUILDTEST
     ${build_cmd[@]}
 
 	if [[ $? -eq 0 ]]; then
@@ -151,17 +155,15 @@ function pre_config () {
 	fi
 
 	# exporting environment variables for the Jupyter Notebook environment
-	setup_singularity_env
+	setup_environment
 
 	if [[ ! -z $WDURL ]] && [[ ! -z $WDUN ]] && [[ ! -z $WDT ]]; then
 		mount_WebDAV
 		if [[ $? == 2 ]]; then
-			echo "[WEBDAV] Could not authenticate to webdav server. Please check your login credentials" > $user_log_directory/webdav.err
-			echo "[WEBDAV] Could not authenticate to webdav server. Please check your login credentials" >> $user_log_directory/lastlog
-			create_log_entry "WARNING" "[WDFS] Login credentials for user $JUPYTERHUB_USER seems to be wrong."
+			create_log_entry "WARNING" "[WEBDAV] Login credentials for user $JUPYTERHUB_USER seems to be wrong."
 		else
 			create_log_entry "INFO" "[WEBDAV] (FUSE) Mounting WebDAV for user $JUPYTERHUB_USER"
-			# Singularity will then automatically bind the directory
+			# Singularity will then automatically bind the directory inside the container
 			export SINGULARITY_BIND=$SINGULARITY_BIND,$webdav_mount_dir:$webdav_mount_dir_container
 		fi
 	fi
