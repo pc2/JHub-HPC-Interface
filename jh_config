@@ -19,19 +19,19 @@ external_hub_url="http://127.0.0.1:8083/hub/api"
 cmd_run_job='ccsalloc --quiet -g hpc-lco-jupyter --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog'
 cmd_run_job_debug='ccsalloc --quiet -g hpc-lco-jupyter --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr'
 # cmd_run_job_filter will be applied on cmd_run_job and cmd_run_job_debug
-cmd_run_job_filter=''
+cmd_run_job_filter='cat'
 
 cmd_kill_job='ccskill $JOBID'
 
 cmd_job_owner='ccsinfo -s --mine --raw --fmt=%N $JOBID'
-cmd_job_owner_filter=''
+cmd_job_owner_filter='cat'
 
 cmd_job_batchfile='ccsinfo -s --mine --raw --fmt=%b $JOBID'
 cmd_job_batchfile_filter='cut -d " " -f2'
 
 # The output of cmd_job_state should only cotain the job state
 cmd_job_state='ccsinfo -s --mine --raw --fmt=%w $JOBID'
-cmd_job_state_filter=''
+cmd_job_state_filter='cat'
 
 cmd_job_get_mapped_node='ccsinfo -s --mine --raw --fmt=%m $JOBID'
 cmd_job_get_mapped_node_filter='grep -o "^node[0-9][0-9]-[0-9][0-9][0-9]\|^gpu[0-9][0-9][0-9]"'

@@ -8,5 +8,4 @@ JOBID=$1
 
 mapped_node=$(eval $cmd_job_get_mapped_node | eval $cmd_job_get_mapped_node_filter)
 job_state=$(eval $cmd_job_state | eval $cmd_job_state_filter)
-
 echo $mapped_node $job_state
