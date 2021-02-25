@@ -13,31 +13,33 @@ scratch_dir=/scratch/hpc-lco-jupyter
 external_hub_url="http://127.0.0.1:8083/hub/api"
 ############################################
 
-####### WORKLOAD MANAGER CONFIGURATION #######	
-# If you do not need a filter (pipe) just type `cat` in it. 
-cmd_run_job=(ccsalloc --quiet -g hpc-lco-jupyter --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog)
-cmd_run_job_debug=(ccsalloc --quiet -g hpc-lco-jupyter --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr)
+####### WORKLOAD MANAGER CONFIGURATION #######
+#
+JOBID="$JOBID"
+
+cmd_run_job="ccsalloc --quiet -g hpc-lco-jupyter --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog"
+cmd_run_job_debug="ccsalloc --quiet -g hpc-lco-jupyter --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr"
 # cmd_run_job_filter will be applied on cmd_run_job and cmd_run_job_debug
-cmd_run_job_filter=(cat)
+cmd_run_job_filter=""
 
-cmd_kill_job=(ccskill)
+cmd_kill_job="ccskill $JOBID"
 
-cmd_job_owner=(ccsinfo -s --mine --raw --fmt=%N $1)
-cmd_job_owner_filter=(cat)
+cmd_job_owner="ccsinfo -s --mine --raw --fmt=%N $1"
+cmd_job_owner_filter=""
 
-cmd_job_batchfile=(ccsinfo -s --mine --raw --fmt=%b $1)
-cmd_job_batchfile_filter=(cut -d " " -f2)
+cmd_job_batchfile="ccsinfo -s --mine --raw --fmt=%b $1"
+cmd_job_batchfile_filter="cut -d ' ' -f2"
 
 # The output of cmd_job_state should only cotain the job state
-cmd_job_state=(ccsinfo -s --mine --raw --fmt=%w $1)
-cmd_job_state_filter=(cat)
+cmd_job_state="ccsinfo -s --mine --raw --fmt=%w $1"
+cmd_job_state_filter="cat"
 
-cmd_job_get_mapped_node=(ccsinfo -s --mine --raw --fmt=%m $1)
-cmd_job_get_mapped_node_filter=(grep -o "^node[0-9][0-9]-[0-9][0-9][0-9]\|^gpu[0-9][0-9][0-9]")
+cmd_job_get_mapped_node="ccsinfo -s --mine --raw --fmt=%m $1"
+cmd_job_get_mapped_node_filter="grep -o '^node[0-9][0-9]-[0-9][0-9][0-9]\|^gpu[0-9][0-9][0-9]'"
 
-cluster_job_is_running=(ALLOCATED ALLOCATING)
-cluster_job_is_stopped=(STOPPED STOPPING)
-cluster_job_is_planned=(PLANNED PLANNING)
+cluster_job_is_running="ALLOCATED ALLOCATING"
+cluster_job_is_stopped="STOPPED STOPPING"
+cluster_job_is_planned="PLANNED PLANNING"
 
 job_environment_job_id="$CCS_REQID"
 ##############################################
@@ -74,8 +76,8 @@ singularity_extra_args=""
 # That means that the user has $overlay_size MB space, to configure his environment
 overlay_size=6144
 overlay_location=$home_dir/$JUPYTERHUB_USER/overlay.img
-create_overlay_cmd=(dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_size)
-create_ext3_overlay_cmd=($scratch_dir/e2fsprogs/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location)
+create_overlay_cmd="dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_size"
+create_ext3_overlay_cmd="$scratch_dir/e2fsprogs/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location"
 
 # set which container directory should start for a specific note type (e.g. compute or gpu node)
 container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc_jovyan.sif
@@ -93,7 +95,7 @@ log_dir=$scratch_dir/log
 [[ ! -d $log_dir ]] && [[ $enable_logging ]] && mkdir -p $log_dir
 
 # singularity version that will be used to start container
-cmd_load_singularity=(module load singularity)
+cmd_load_singularity="module load singularity"
 
 # WebDAV
 enable_webdav=true
@@ -104,9 +106,9 @@ _WDURL="$WDURL"
 _WDUN="$WDUN"
 _WDT="$WDT"
 ##
-webdav_cmd=($scratch_dir/WDFS/wdfs)
-webdav_cmd_args=($_WDURL $webdav_mount_dir -o auto_unmount -o username=$_WDUN -o password=$_WDT)
-webdav_cmd_env=(LD_LIBRARY_PATH=$scratch_dir/WDFS/libs/ PATH=$PATH:$scratch_dir/WDFS/)
+webdav_cmd="$scratch_dir/WDFS/wdfs"
+webdav_cmd_args="$_WDURL $webdav_mount_dir -o auto_unmount -o username=$_WDUN -o password=$_WDT"
+webdav_cmd_env="LD_LIBRARY_PATH=$scratch_dir/WDFS/libs/ PATH=$PATH:$scratch_dir/WDFS/"
 
 # syntax e.g. : create_log_entry "WARNING" "message content"
 # Logging Function

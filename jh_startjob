@@ -40,8 +40,8 @@ echo "$input_" > $WRAP_TMP_JOB
 # The default overlay size can be changed in the configuration file jh_config and will be applied when a new user register
 function create_empty_singularity_overlay () {
 
-	${create_overlay_cmd[@]}
-	${create_ext3_overlay_cmd[@]}
+    eval $create_overlay_cmd
+    eval $create_ext_overlay_cmd
 	create_log_entry "INFO" "[START] Empty singularity overlay with ext3 filesystem for user $JUPYTERHUB_USER created"
 }
 
@@ -87,8 +87,8 @@ function check_started_job () {
 
 	# Checking job state after 15 seconds
 	create_log_entry "DEBUG" "Now checking job state!"
-	cmd_job_state+=("$JOBID_OUTPUT")
-	job_state=$(${cmd_job_state[@]})
+    cmd_job_state=$(sed "s/$JOBID/$JOBID_OUTPUT")
+    eval $cmd_job_state
 	# if the job state is something specified in cluster_job_is_planned
 	if [[ ${cluster_job_is_planned[@]} =~ ${job_state} ]]; then
 
