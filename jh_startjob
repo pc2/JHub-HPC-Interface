@@ -87,21 +87,22 @@ function check_started_job () {
 
 	# Checking job state after 15 seconds
 	create_log_entry "DEBUG" "Now checking job state!"
-    cmd_job_state=$(sed "s/$JOBID/$JOBID_OUTPUT")
-    eval $cmd_job_state
+    job_state=$(eval $cmd_job_state)
 	# if the job state is something specified in cluster_job_is_planned
-	if [[ ${cluster_job_is_planned[@]} =~ ${job_state} ]]; then
 
-		create_log_entry "ERROR" "Job state for job $JOBID_OUTPUT changed to planned! Kill the job.."
+    # DEBUG TEST
+    echo $cluster_job_is_planned > $scratch_dir/alles_in_planned
+    echo $job_state > $scratch_dir/aktueller_status
+
+	if [[ $cluster_job_is_planned == *"$job_state"* ]]; then
+		create_log_entry "ERROR" "[Start] Job state for job $JOBID_OUTPUT changed to planned! Kill the job.."
 		>&2 echo "It seems your requested resources are currently not available. Please start a notebook server with less resources or try again later."
-		cmd_kill_job+=("$JOBID_OUTPUT")
-		${cmd_kill_job[@]}
+        eval $cmd_kill_job
 		exit 1
-	elif [[ ${cluster_job_is_stopped[@]} =~ ${job_state} ]]; then
-		create_log_entry "ERROR" "[START] The notebook job $JOBID_OUTPUT is lost after 15 seconds"
+	elif [[ $cluster_job_is_stopped == *"$job_state"* ]]; then
+		create_log_entry "ERROR" "[Start] The notebook job $JOBID_OUTPUT is lost after 15 seconds"
 		>&2 echo "Hmm... Something went wrong. Please ask the system administrator!"
-		cmd_kill_job+=("$JOBID_OUTPUT")
-		${cmd_kill_job[@]}
+        eval $cmd_kill_job
 		exit 1
 	else
 		create_log_entry "DEBUG" "Job status for user $JUPYTERHUB_USER with ID $JOBID_OUTPUT checked. Everything seems fine until here"
@@ -118,41 +119,41 @@ function run_wlm_job () {
 		[[ ! -d $user_log_directory ]] && mkdir $user_log_directory
 	fi
 
+    # Run the Workload Manager job
 	if $enable_debug_mode; then
-		cmd_run_job_debug+=("$WRAP_TMP_JOB")
-		JOBID_OUTPUT=$(${cmd_run_job_debug[@]} | ${cmd_run_job_filter[@]})
+        RUN_JOB_OUTPUT=$(eval $cmd_run_job_debug $WRAP_TMP_JOB)
 	else
-		cmd_run_job+=("$WRAP_TMP_JOB")
-		JOBID_OUTPUT=$(${cmd_run_job[@]} | ${cmd_run_job_filter[@]})
+        RUN_JOB_OUTPUT=$(eval $cmd_run_job $WRAP_TMP_JOB)
 	fi
 
 	# This error code is OpenCCS specific
 	if [[ $? == 105 ]]; then
 		>&2 echo "It seems no job can be started. Maybe the cluster is in maintenance mode?"
-		create_log_entry "ERROR" "[START] It seems no job can be started. Maybe the cluster is in maintenance mode?"
+		create_log_entry "ERROR" "[Start] It seems no job can be started. Maybe the cluster is in maintenance mode?"
 		exit 1
 	fi
 
-	create_log_entry "DEBUG" "[Workload Manager] Output: ${JOBID_OUTPUT}"
+	create_log_entry "DEBUG" "[Workload Manager] Output: $RUN_JOB_OUTPUT"
 
 	# write job id to output -> Used by the JupyterHub to control the job
 	# After output, the JupyterHub Server extracts the Job ID with the method: parse_job_id . See class CustomHPCSpawner
-	JOBID_OUTPUT=$(echo $JOBID_OUTPUT | grep -Po "\\d+")
+	JOBID=$(echo $RUN_JOB_OUTPUT | grep -Po "\\d+")
 
     if [[ ! $? -eq 0 ]]; then
-        create_log_entry "ERROR" "Cannot filter a digit from job allocation output."
+        create_log_entry "ERROR" "[Start] Cannot filter a digit from job allocation output."
     fi
 
 	# check whether output is zero 0
-	if [[ "$JOBID_OUTPUT" -eq "0" ]]; then
-		create_log_entry "ERROR" "JOBID_OUTPUT is zero??? Kill the job."
+	if [[ "$JOBID" -eq "0" ]]; then
+		create_log_entry "ERROR" "[Start] JOBID_OUTPUT is zero??? Kill the job."
 		>&2 echo "Cannot extract Job ID. Please try again."
         sleep 5
         check_started_job
 	fi
 
-	echo $JOBID_OUTPUT
-	create_log_entry "INFO" "[START] Running notebook job for user $JUPYTERHUB_USER with ID $JOBID_OUTPUT"
+    # So the only output of this wrapper script (called by the JupyterHub) is the job id.
+	echo $JOBID
+	create_log_entry "INFO" "[Start] Running notebook job for user $JUPYTERHUB_USER with ID $JOBID"
 }
 
 ### START FUNCTIONS

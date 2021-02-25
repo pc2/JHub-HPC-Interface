@@ -6,9 +6,9 @@ source $SDIR/jh_config
 # The JupyterHub server calls this wrapper script. The job id of the user is in $1 (transfers by the JupyterHub server extracted at start time)
 
 # get information from given job $1
-jobid=$1
-job_owner=$(${cmd_job_owner[@]})
-job_batch=$(${cmd_job_batchfile[@]} | ${cmd_job_batchfile_filter[@]})
+JOBID=$1
+job_owner=$(eval $cmd_job_owner)
+job_batch=$(eval $cmd_job_batchfile | eval $cmd_job_batchfile_filter)
 
 function cleanup () {
 
@@ -25,8 +25,7 @@ function stop_instance () {
 	cleanup
 
 	# Finally kill the job
-	cmd_kill_job+=("$jobid")
-	${cmd_kill_job[@]}
+	eval $cmd_kill_job
 
 	create_log_entry "DEBUG" "[Kill] Job for user $job_owner with ID $jobid stopped!"	
 }

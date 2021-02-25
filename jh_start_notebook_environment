@@ -41,7 +41,7 @@ function mount_WebDAV () {
                 WDURL=$(sed "s/%40/@/" <<< $WDURL) 
             fi
 			# mount on compute/gpu node
-            env - ${webdav_cmd_env[@]} ${webdav_cmd[@]} ${webdav_cmd_args[@]}
+            eval $webdav_cmd_env $webdav_cmd $webdav_cmd_args
             
 			if [[ ! $? -eq 0 ]]; then
 				>&2 echo "Could not authenticate to webdav server. Please check your login credentials"
@@ -64,31 +64,31 @@ function mount_WebDAV () {
 function run_compute_container () {
 
 	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on compute node..."
-    build_cmd=()
+    build_cmd=""
     if $use_singularity; then
         if $enable_debug_mode; then
-            build_cmd+=(singularity --verbose exec)
+            build_cmd="$build_cmd singularity --verbose exec"
         else
-            build_cmd+=(singularity exec)
+            build_cmd="$build_cmd singularity exec"
         fi
         if [[ -n $singularity_home_dir ]]; then
-            build_cmd+=(--home $singularity_home_dir)
+            build_cmd="$build_cmd --home $singularity_home_dir"
         fi
         if [[ -n $singularity_no_mount ]]; then
-            build_cmd+=(--no-mount $singularity_no_mount)
+            build_cmd="$build_cmd --no-mount $singularity_no_mount"
         fi
         if $creating_user_homes; then
-            build_cmd+=(--overlay $overlay_location)
+            build_cmd="$build_cmd --overlay $overlay_location"
         fi
         if [[ -n $singularity_extra_args ]]; then
-            build_cmd+=($singularity_extra_args)
+            build_cmd="$build_cmd $singularity_extra_args"
         fi
-        build_cmd+=($container_to_start_compute ${@:2})
+        build_cmd="$build_cmd $container_to_start_compute ${@:2}"
     else
-        build_cmd+=(${@:2})
+        build_cmd="$build_cmd ${@:2}"
     fi
    
-    ${build_cmd[@]}
+    eval $build_cmd
     
 	if [[ $? -eq 0 ]]; then
 		create_log_entry "INFO" "[Jupyter Notebook] Notebook server  for user $JUPYTERHUB_USER on host $(hostname) started!"
@@ -100,31 +100,31 @@ function run_gpu_container () {
 	
 	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on gpu node..."
 	export NVIDIA_VISIBLE_DEVICES=0
-    build_cmd=()
+    build_cmd=""
     if $use_singularity; then
         if $enable_debug_mode; then
-            build_cmd+=(singularity --verbose exec --nv)
+            build_cmd="$build_cmd singularity --verbose exec --nv"
         else
-            build_cmd+=(singularity exec --nv)
+            build_cmd="$build_cmd singularity exec --nv"
         fi
         if [[ -n $singularity_home_dir ]]; then
-            build_cmd+=(--home $singularity_home_dir)
+            build_cmd="$build_cmd --home $singularity_home_dir"
         fi
         if [[ -n $singularity_no_mount ]]; then
-            build_cmd+=(--no-mount $singularity_no_mount)
+            build_cmd="$build_cmd --no-mount $singularity_no_mount"
         fi
         if $creating_user_homes; then
-            build_cmd+=(--overlay $overlay_location)
+            build_cmd="$build_cmd --overlay $overlay_location"
         fi
         if [[ -n $singularity_extra_args ]]; then
-            build_cmd+=($singularity_extra_args)
+            build_cmd="$build_cmd $singularity_extra_args"
         fi
-        build_cmd+=($container_to_start_gpu ${@:2})
+        build_cmd="$build_cmd $container_to_start_gpu ${@:2}"
     else
-        build_cmd+=(${@:2})
+        build_cmd="$build_cmd ${@:2}"
     fi
    
-    ${build_cmd[@]}
+    eval $build_cmd
 
 	if [[ $? -eq 0 ]]; then
 		create_log_entry "INFO" "[Jupyter Notebook] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
@@ -136,7 +136,7 @@ function pre_config () {
 
 	# loading singularity so that the singularity commands are available (no shit sherlock)	
 	if $use_singularity; then
-		${cmd_load_singularity[@]}
+		eval $cmd_load_singularity
 		create_log_entry "DEBUG" "Loading singularity environment for user $JUPYTERHUB_USER ..."
 		test_singularity=$(which singularity)
 		if [[ ! $? -eq 0 ]]; then
