@@ -13,6 +13,7 @@ The technical core of this project is the transparent integration of digital wor
 ## Table of Contents
 - [JupyterHub + High-Performance Computing](#jupyterhub--high-performance-computing)
   - [Table of Contents](#table-of-contents)
+  - [TODO](#todo)
   - [Installation JupyterHub Server](#installation-jupyterhub-server)
     - [Requirements](#requirements)
     - [Node mapping](#node-mapping)
@@ -21,6 +22,8 @@ The technical core of this project is the transparent integration of digital wor
     - [Clone Repository](#clone-repository)
     - [Singularity Container](#singularity-container)
       - [Build Singularity Container](#build-singularity-container)
+        - [Compute](#compute)
+        - [GPU (Tensorflow)](#gpu-tensorflow)
     - [Configuration Wizard for Slurm](#configuration-wizard-for-slurm)
       - [Start the configuration wizard](#start-the-configuration-wizard)
     - [Configuration file (jh_config)](#configuration-file-jh_config)
@@ -30,6 +33,8 @@ The technical core of this project is the transparent integration of digital wor
     - [3. Wrapper Scripts](#3-wrapper-scripts)
     - [4. Procedure](#4-procedure)
   - [Examples](#examples)
+  - [Logging](#logging)
+    - [Debug mode](#debug-mode)
   - [Shibboleth Integration](#shibboleth-integration)
   - [nbgrader Integration](#nbgrader-integration)
     - [Installation](#installation)
@@ -262,6 +267,24 @@ On the HPC system, wrapper scripts are used to execute and stop the job (`batch_
 ## Examples
 
 You will find examples for the configuration files jh_config and jupyterhub_config.py in the directory _examples/_.
+
+---
+
+## Logging
+
+![Logging Example](logging_example.png)
+
+The function that stores log information is defined in the configuration file `jh_config`.
+In each wrapper script, the `create_log_entry` function stores log files in the `$log_dir`.
+
+The `jh_show_log` script can be used to retrieve current logs.
+
+### Debug mode
+
+By default the logs contain only information such as warnings or error messages.
+It is also possible to switch on the debug mode, which writes extended information into the log files.
+
+Just set `$enable_debug_mode` in the configuration file to true.
 
 ---
 
