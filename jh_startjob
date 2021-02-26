@@ -40,46 +40,43 @@ echo "$input_" > $WRAP_TMP_JOB
 # The default overlay size can be changed in the configuration file jh_config and will be applied when a new user register
 function create_empty_singularity_overlay () {
 
-    eval $create_overlay_cmd
-    eval $create_ext_overlay_cmd
-	create_log_entry "INFO" "[START] Empty singularity overlay with ext3 filesystem for user $JUPYTERHUB_USER created"
+    create_log_entry "DEBUG" "[Singularity Overlay] Trying to create singularity overlay with ext3 filesystem for user $JUPYTERHUB_USER"
+    create_overlay_output=$(eval $create_overlay_cmd)
+    if [[ ! $? == 0 ]]; then
+        create_log_entry "ERROR" "Error creating an overlay. Output: $create_overlay_output"
+        >&2 echo "Error creating an overlay. Output: $create_overlay_output"
+        exit 1
+    fi
+    create_ext3_overlay_output=$(eval $create_ext3_overlay_cmd)
+    if [[ ! $? == 0 ]]; then
+        create_log_entry "ERROR" "Error while creating an ext3 filesystem. Output: $create_ext3_overlay_output"
+        >&2 echo "Error while creating an ext3 filesystem. Output: $create_ext3_overlay_output"
+        exit 1
+    fi
+	create_log_entry "INFO" "[Singularity Overlay] Empty singularity overlay with ext3 filesystem for user $JUPYTERHUB_USER successfully created"
 }
 
-function check_new_user () {
+function initialize_user_env () {
 
 	if $creating_user_homes; then
+        [[ ! -d $home_dir ]] && mkdir -p $home_dir
 		if [[ ! -d $home_dir/$JUPYTERHUB_USER ]]; then
-			touch $home_dir/.$JUPYTERHUB_USER.is_new
-		fi
-	fi
-}
-
-function create_user_home () {
-
-	if $creating_user_homes; then
-		if [[ ! -d $home_dir/$JUPYTERHUB_USER ]]; then
-			create_log_entry "INFO" "[START] User $JUPYTERHUB_USER seems to be new.. Creating home and notebook directory"
+			create_log_entry "INFO" "[Start] User $JUPYTERHUB_USER seems to be new.. Creating home directory $user_home_dir"
 			# create user and log directory
 			mkdir -p $user_log_directory
 			# create singularity overlay for user so that user changes are permanent
 			if $use_singularity; then
 				create_empty_singularity_overlay $home_dir/$JUPYTERHUB_USER/overlay.img
 			fi
-			# move previousley created job files to the new job directory
-			create_log_entry "INFO" "[START] Home and notebook directory for user $JUPYTERHUB_USER created"
 		else
-			# user is already known (using existing notebook directory and singularity container...)
+            # User is already known
 			[[ ! -d $user_log_directory ]] && mkdir $user_log_directory
 			[[ -f $user_log_directory/lastlog ]] && rm $user_log_directory/lastlog
-			create_log_entry "INFO" "[START] User $JUPYTERHUB_USER is already known... Using existing notebook directory and singularity overlay"
+			create_log_entry "INFO" "[Start] User $JUPYTERHUB_USER is already known... Using existing notebook directory and singularity overlay"
 		fi
 	else
 		create_log_entry "DEBUG" "Not creating a user home directory for user $JUPYTERHUB_USER"
 	fi
-
-	create_log_entry "DEBUG" "Checking job in 15 seconds..."
-	sleep 15
-	check_started_job
 }
 
 ### CHECK PREVIOUSLY STARTED JOB. SOMETIMES THE WORKLOAD MANAGER IS BR0KEN 
@@ -89,23 +86,18 @@ function check_started_job () {
 	create_log_entry "DEBUG" "Now checking job state!"
     job_state=$(eval $cmd_job_state)
 	# if the job state is something specified in cluster_job_is_planned
-
-    # DEBUG TEST
-    echo $cluster_job_is_planned > $scratch_dir/alles_in_planned
-    echo $job_state > $scratch_dir/aktueller_status
-
 	if [[ $cluster_job_is_planned == *"$job_state"* ]]; then
-		create_log_entry "ERROR" "[Start] Job state for job $JOBID_OUTPUT changed to planned! Kill the job.."
+		create_log_entry "ERROR" "[Start] Job state for job $JOBID changed to planned! Kill the job.."
 		>&2 echo "It seems your requested resources are currently not available. Please start a notebook server with less resources or try again later."
         eval $cmd_kill_job
 		exit 1
 	elif [[ $cluster_job_is_stopped == *"$job_state"* ]]; then
-		create_log_entry "ERROR" "[Start] The notebook job $JOBID_OUTPUT is lost after 15 seconds"
+		create_log_entry "ERROR" "[Start] The notebook job $JOBID is lost after 15 seconds"
 		>&2 echo "Hmm... Something went wrong. Please ask the system administrator!"
         eval $cmd_kill_job
 		exit 1
 	else
-		create_log_entry "DEBUG" "Job status for user $JUPYTERHUB_USER with ID $JOBID_OUTPUT checked. Everything seems fine until here"
+		create_log_entry "DEBUG" "Job status for user $JUPYTERHUB_USER with ID $JOBID checked. Everything seems fine until here"
 	fi
 }
 
@@ -126,13 +118,6 @@ function run_wlm_job () {
         RUN_JOB_OUTPUT=$(eval $cmd_run_job $WRAP_TMP_JOB)
 	fi
 
-	# This error code is OpenCCS specific
-	if [[ $? == 105 ]]; then
-		>&2 echo "It seems no job can be started. Maybe the cluster is in maintenance mode?"
-		create_log_entry "ERROR" "[Start] It seems no job can be started. Maybe the cluster is in maintenance mode?"
-		exit 1
-	fi
-
 	create_log_entry "DEBUG" "[Workload Manager] Output: $RUN_JOB_OUTPUT"
 
 	# write job id to output -> Used by the JupyterHub to control the job
@@ -140,23 +125,25 @@ function run_wlm_job () {
 	JOBID=$(echo $RUN_JOB_OUTPUT | grep -Po "\\d+")
 
     if [[ ! $? -eq 0 ]]; then
-        create_log_entry "ERROR" "[Start] Cannot filter a digit from job allocation output."
+        create_log_entry "ERROR" "[Start] Cannot filter a number from job allocation output."
     fi
 
 	# check whether output is zero 0
-	if [[ "$JOBID" -eq "0" ]]; then
+	if [[ "$JOBID" == "0" ]]; then
 		create_log_entry "ERROR" "[Start] JOBID_OUTPUT is zero??? Kill the job."
 		>&2 echo "Cannot extract Job ID. Please try again."
-        sleep 5
-        check_started_job
+        exit 1
 	fi
 
     # So the only output of this wrapper script (called by the JupyterHub) is the job id.
 	echo $JOBID
 	create_log_entry "INFO" "[Start] Running notebook job for user $JUPYTERHUB_USER with ID $JOBID"
+
+	create_log_entry "DEBUG" "Checking job $JOBID in 15 seconds..."
+	sleep 15
+	check_started_job
 }
 
 ### START FUNCTIONS
-check_new_user
+initialize_user_env
 run_wlm_job
-create_user_home

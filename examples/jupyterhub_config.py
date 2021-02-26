@@ -149,38 +149,11 @@ class RemoteHPCSpawner_OpenCCS (RemoteHPCSpawner):
         export WDT={{davtoken}}
     {% endif %}
 
-    function run_job () {
     {% if ngpus %}
     JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment gpu {{cmd}}
     {% else %}
     JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment compute {{cmd}}
     {% endif %}
-    }
-
-    # if the user is new (file $home_dir/.{{username}}.is_new exists) then check if the created overlay in jh_startjob is ready to use
-    if [[ -f $home_dir/.{{username}}.is_new ]]; then
-        # get current setting from jh_config (e.g. 6144)
-        current_overlay_size_setting=$(cat $scratch_dir/jh_config | grep overlay_size | tail -n 1 | cut -d "=" -f 2)
-        sleep 2
-        while (true); do
-            #copied_size=$(du -sm $overlay_location | awk '{print $1}')
-            #if [[ $copied_size == $current_overlay_size_setting ]]; then 
-                # check whether overlay file is an ext3 image
-                ext3_overlay=$(file $overlay_location | grep ext3)
-                if [[ $? -eq 0 ]]; then
-                    # if exit code is zero -> break and its ready to use
-                    sleep 1
-                    rm $home_dir/.{{username}}.is_new
-                    create_log_entry "DEBUG" "[Overlay] Overlay $overlay_location seems to be an ext3 overlay file!"
-                    break
-                else
-                    continue
-                fi
-            #fi
-        done
-    fi
-
-    run_job
 	"""
 
 class RemoteHPCSpawner_Slurm (RemoteHPCSpawner):
@@ -207,38 +180,11 @@ class RemoteHPCSpawner_Slurm (RemoteHPCSpawner):
         export WDT={{davtoken}}
     {% endif %}
 
-    function run_job () {
     {% if ngpus %}
     JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment gpu {{cmd}}
     {% else %}
     JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment compute {{cmd}}
     {% endif %}
-    }
-
-    # if the user is new (file $home_dir/.{{username}}.is_new exists) then check if the created overlay in jh_startjob is ready to use
-    if [[ -f $home_dir/.{{username}}.is_new ]]; then
-        # get current setting from jh_config (e.g. 6144)
-        current_overlay_size_setting=$(cat $scratch_dir/jh_config | grep overlay_size | tail -n 1 | cut -d "=" -f 2)
-        sleep 2
-        while (true); do
-            #copied_size=$(du -sm $overlay_location | awk '{print $1}')
-            #if [[ $copied_size == $current_overlay_size_setting ]]; then 
-                # check whether overlay file is an ext3 image
-                ext3_overlay=$(file $overlay_location | grep ext3)
-                if [[ $? -eq 0 ]]; then
-                    # if exit code is zero -> break and its ready to use
-                    sleep 1
-                    rm $home_dir/.{{username}}.is_new
-                    create_log_entry "DEBUG" "[Overlay] Overlay $overlay_location seems to be an ext3 overlay file!"
-                    break
-                else
-                    continue
-                fi
-            #fi
-        done
-    fi
-
-    run_job
 	"""
 
 c.RemoteHPCSpawner.exec_prefix = '';

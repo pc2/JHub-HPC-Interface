@@ -23,22 +23,23 @@ function setup_environment () {
     	export JUPYTER_DATA_DIR=$singularity_home_dir/.local/share/jupyter/
     	export JUPYTER_CONFIG_DIR=$singularity_home_dir/.local/share/jupyter/
     	export JUPYTER_RUNTIME_DIR=$singularity_home_dir/.runtime/
-    	# singularity will bind host filesystems to a specific path specified in jh_config
+        # singularity will bind host filesystems to a specific path specified in jh_config
         export SINGULARITY_BIND=$singularity_bind
- 	    # pip/3 is using this as tmp dir. Otherwise pip fails with: no space left on device
-	    export TMPDIR=/opt/
+        # pip/3 is using this as tmp dir. Otherwise pip fails with: no space left on device
+        export TMPDIR=/opt/
     fi
 }
 
 function mount_WebDAV () {
-
+    
 	if $enable_webdav; then
 		if [[ -f $webdav_cmd ]]; then
 			# create WebDAV directory as mount destination
-			mkdir -p $webdav_mount_dir
+            mkdir -p $webdav_mount_dir
             # check if webdav url contains a '%40'
             if [[ $WDURL == *"%40"* ]]; then
                 WDURL=$(sed "s/%40/@/" <<< $WDURL) 
+                create_log_entry "DEBUG" "[WebDAV] Found %40 in WebDAV URL for user $JUPYTERUB_USER .. Replaced it with: @"
             fi
 			# mount on compute/gpu node
             eval $webdav_cmd_env $webdav_cmd $webdav_cmd_args
@@ -137,10 +138,10 @@ function pre_config () {
 	# loading singularity so that the singularity commands are available (no shit sherlock)	
 	if $use_singularity; then
 		eval $cmd_load_singularity
-		create_log_entry "DEBUG" "Loading singularity environment for user $JUPYTERHUB_USER ..."
+		create_log_entry "DEBUG" "[Load Singularity] Loading singularity environment for user $JUPYTERHUB_USER ..."
 		test_singularity=$(which singularity)
 		if [[ ! $? -eq 0 ]]; then
-			create_log_entry "ERROR" "Using singularity but command singularity not found! See jh_config: cmd_load_singularity"
+			create_log_entry "ERROR" "[Load Singularity] Using singularity but command singularity not found! See jh_config: cmd_load_singularity"
 			>&2 echo "Using singularity but command singularity not found! See jh_config: cmd_load_singularity"
 			exit 1
 		else
@@ -160,11 +161,11 @@ function pre_config () {
 	if [[ ! -z $WDURL ]] && [[ ! -z $WDUN ]] && [[ ! -z $WDT ]]; then
 		mount_WebDAV
 		if [[ $? == 2 ]]; then
-			create_log_entry "WARNING" "[WEBDAV] Login credentials for user $JUPYTERHUB_USER seems to be wrong."
+			create_log_entry "WARNING" "[WebDAV] Login credentials for user $JUPYTERHUB_USER seems to be wrong."
 		else
-			create_log_entry "INFO" "[WEBDAV] (FUSE) Mounting WebDAV for user $JUPYTERHUB_USER"
+			create_log_entry "INFO" "[WebDAV] (FUSE) Mounting WebDAV for user $JUPYTERHUB_USER"
 			# Singularity will then automatically bind the directory inside the container
-			export SINGULARITY_BIND=$SINGULARITY_BIND,$webdav_mount_dir:$webdav_mount_dir_container
+            export SINGULARITY_BIND="$SINGULARITY_BIND,$webdav_mount_dir:$webdav_mount_dir_container"
 		fi
 	fi
 
