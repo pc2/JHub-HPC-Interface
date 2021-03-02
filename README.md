@@ -84,17 +84,19 @@ An example entry might look like the following:
 
 ### Requirements
 
-* __Singularity (> v.3.7.0)__
-* An user who is allowed to allocate resources on the HPC system
-  * A group with a directory (The user should be a member of this group)
-  * This user should also have entered the public key of the tunnelbot user in the file _~/.ssh/authorized_keys_
+* You need a user who is allowed to allocate resources on the HPC system
+  * The public key part of the tunnelbot-user created on the JupyterHub (-> _~/.ssh/authorized_keys_)
+
+#### Requirements (If you want to use Singularity)
+
+* __Singularity (> v.3.7.0)__ (If you want to use Singularity)
 * e2fsprogs with following option:
   * https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/commit/?id=217c0bdf17899c0f79b73f76feeadd6d55863180
-* A directory to create a valid overlay for singularity
+* A directory to create a valid overlay for Singularity (See the official docs: https://sylabs.io/docs/)
 
 ### Clone Repository
 
-The best way is to copy the repository into the scratch directory of the user who is allowed to perform calculations.
+The best way is to copy the repository into a scratch directory of the user who is allowed to allocate resources.
 
 ```bash
 git clone https://github.com/pc2/JHub-HPC-Interface.git
