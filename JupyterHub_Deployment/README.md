@@ -1,23 +1,22 @@
-# JupyterHub-Server Deployment mit Ansible
+# JupyterHub Deployment with Ansible
 
-Folgende Installationen und Konfigurationen werden automatisiert vorgenommen:
+The following installations and configurations are performed automatically:
 
-- Installation von JupyterHub
-- Installation des Batchspawners
-- Installation benötigter Tools (Git etc.)
-- Mapping der HPC-Knotennamen
-- Kopieren der Konfigurationsdateien
-- JupyterHub-Neustart
+- Installation of JupyterHub
+- Installation of batch spawner
+- Installation of required tools (Git etc.)
+- Copying the configuration files
+- JupyterHub restart
 
-## Voraussetzungen
+## Requirements
 
-- Ansible auf dem Kontrollknoten installiert (siehe unten)
-- Benutzer `ansiblebot` mit root-Rechten auf dem JupyterHub-Server vorhanden
-- passwortloser SSH-Zugriff als `ansiblebot` auf den JupyterHub-Server möglich
+- Ansible installed on the control node (see below).
+- user `ansiblebot` with root privileges exists on the JupyterHub server
+- passwordless SSH access as `ansiblebot` to the JupyterHub server granted
 
-## Installation von Ansible
+## Ansible installation
 
-Die [Installation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) von Ansible auf dem Kontrollknoten erfolgt so:
+The [installation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) of Ansible on the control node is done as follows:
 
 ```bash
 sudo apt update
@@ -26,28 +25,21 @@ sudo apt-add-repository --yes --update ppa:ansible/ansible
 sudo apt install ansible
 ```
 
-Auf dem JupyterHub-Server selbst ist keine Ansible-Installation nötig.
+No Ansible installation is required on the JupyterHub server itself.
 
-## Durchführen der Konfiguration
+## Carrying out the deployment
 
-Zuerst muss der JupyterHub-Server in `/etc/ansible/hosts` eingetragen werden, damit er von Ansible erreicht werden kann. Dort wird die IP und ggf. eine vom Standard abweichende SSH-Portnummer eingetragen:
+First, the JupyterHub server must be added to `/etc/ansible/hosts` so that it can be reached by Ansible. The IP and, if necessary, a non-standard SSH port are specified there:
 
 ```
 # JupyterHub Server:
 [jupyterhub_server]
 1.2.3.4                   # IP
-#1.2.3.4 ansible_port=123 # alternativ mit abweichendem SSH-Port
+#1.2.3.4 ansible_port=123 # alternatively with different SSH port
 ```
 
-Dann wird das Ansible-Playbook ausgeführt:
+Then the Ansible playbook is run:
 
 ```bash
 ansible-playbook --ask-become-pass ./jupyterhub-deployment.yml
 ```
-
-<!--
-Test:
-ssh -t ansiblebot@127.0.0.1 -p 2222 "$(< ./install_jupyterhub.sh)"
-ssh -t ansiblebot@127.0.0.1 -p 2222 "$(< ./install_batchspawner.sh)"
-ssh -t ansiblebot@127.0.0.1 -p 2222 "$(< ./hpc-nodenames-mapping.sh)"
--->
