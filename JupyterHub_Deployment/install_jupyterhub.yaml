@@ -1,4 +1,4 @@
-# This Ansible tasklist installs JupyterHub from the ground up. It follows the instructions found in the official documentation (https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html). This tasklist will not install JupyterLab.
+# This Ansible tasklist installs JupyterHub from the ground up. It follows the instructions found in the official documentation (https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html). This tasklist will NOT install JupyterLab.
 
   - name: Installing JupyterHub - Step 1
     apt:

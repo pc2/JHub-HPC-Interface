@@ -21,7 +21,7 @@
 
   - name: Installing Batchspawner - Step 3
     shell: /opt/jupyterhub/bin/pip3 install -e /opt/jupyterhub/batchspawner/
-    # Note, that the correct path to pip must be specified, in order to install Batchspawner in the corresponding environment.
+    # Note that the correct path to pip must be specified, in order to install Batchspawner in the corresponding environment.
     register: result
   - debug:
       var: result.stdout_lines

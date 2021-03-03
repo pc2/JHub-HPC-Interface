@@ -27,23 +27,10 @@
 
 ##### Configuration #####
 
-  - name: Mapping HPC node names
-    script: "./map_hpc-nodenames.sh"
-    register: result
-  - debug:
-      var: result.stdout_lines
-    when: result.stdout_lines is defined
-
   - name: Copy JupyterHub config
     copy:
       src: "./config_files/jupyterhub_config.py"
       dest: "/opt/jupyterhub/etc/jupyterhub/"
-      force: yes
-
-  - name: Copy Batchspawner config
-    copy:
-      src: "./config_files/batchspawner.py"
-      dest: "/opt/jupyterhub/batchspawner/batchspawner/"
       force: yes
 
 ##### Finish deployment #####
