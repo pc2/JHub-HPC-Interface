@@ -13,6 +13,7 @@ The technical core of this project is the transparent integration of digital wor
 ## Table of Contents
 
 - [Installation JupyterHub Server](#installation-jupyterhub-server)
+  - [JupyterHub and BatchSpawner](#jupyterhub-and-batchspawner)
   - [SSH tunnel user](#ssh-tunnel-user)
   - [Node mapping](#node-mapping)
 - [Installation HPC System](#installation-hpc-system)
@@ -65,21 +66,21 @@ If you decide to do the installations yourself, please proceed as follows:
 
 ### SSH tunnel user
 
-A user called ´tunnelbot´ is needed on the JupyterHub server. This user is responsible for starting an SSH tunnel between the compute node and the JupyterHub server. An SSH key pair for the above mentioned purpose must be generated. See ´/examples/jupyterhub_config.py´ for more information.
+A user called `tunnelbot` is needed on the JupyterHub server. This user is responsible for starting an SSH tunnel between the compute node and the JupyterHub server. An SSH key pair for the above mentioned purpose must be generated. See `/examples/jupyterhub_config.py` for more information.
 
 ### Node mapping
 
-JupyterHub extracts the execution host name of the HPC system (e.g. ´node01-002´). When a notebook server is started, an SSH tunnel is established using the notebook port.
+JupyterHub extracts the execution host name of the HPC system (e.g. `node01-002`). When a notebook server is started, an SSH tunnel is established using the notebook port.
 
-In order for JupyterHub to be able to resolve the compute nodes host name, the ´/etc/hosts´ file must be edited. An example entry might look like the following:
+In order for JupyterHub to be able to resolve the compute nodes host name, the `/etc/hosts` file must be edited. An example entry might look like the following:
 
-´´´
+```
 127.0.0.1 node01-001
 127.0.0.1 node01-002
 127.0.0.1 node01-003
 ...
 127.0.0.1 node12-048
-´´´
+```
 
 The actual node names depend on your HPC system of course.
 
