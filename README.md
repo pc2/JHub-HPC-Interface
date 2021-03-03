@@ -1,6 +1,6 @@
 # JupyterHub + High-Performance Computing
 
-*High performance Jupyter Notebooks*
+*- High performance Jupyter Notebooks -*
 
 The aim of this project is to connect JupyterHub to a high-performance computer (HPC). By automatically outsourcing the computations to the HPC system, even complex calculations are possible. While JupyterHub is deployed on a regular server, the notebooks themselves are spawned and run on the remote HPC system.
 
@@ -11,35 +11,35 @@ The technical core of this project is the transparent integration of digital wor
 ---
 
 ## Table of Contents
-- [JupyterHub + High-Performance Computing](#jupyterhub--high-performance-computing)
-  - [Installation JupyterHub Server](#installation-jupyterhub-server)
-    - [Requirements](#requirements)
-    - [Node mapping](#node-mapping)
-  - [Installation HPC System](#installation-hpc-system)
-    - [Requirements](#requirements-1)
-    - [Clone Repository](#clone-repository)
-    - [Singularity Container](#singularity-container)
-      - [Build Singularity Container](#build-singularity-container)
-        - [Compute](#compute)
-        - [GPU (Tensorflow)](#gpu-tensorflow)
-    - [Configuration Wizard for Slurm](#configuration-wizard-for-slurm)
-      - [Start the configuration wizard](#start-the-configuration-wizard)
-  - [Examples](#examples)
-  - [Logging](#logging)
-    - [Debug mode](#debug-mode)
-  - [Shibboleth Integration](#shibboleth-integration)
-  - [nbgrader Integration](#nbgrader-integration)
-    - [Installation](#installation)
-    - [Changing the Student ID to the JupyterHub logged in user name](#changing-the-student-id-to-the-jupyterhub-logged-in-user-name)
-    - [Create nbgrader_config.py](#create-nbgrader_configpy)
-  - [Using WebDAV](#using-webdav)
-  - [Security Precautions](#security-precautions)
-    - [Singularity Host Filesystems](#singularity-host-filesystems)
-    - [JupyterHub API (https or SSH tunnel)](#jupyterhub-api-https-or-ssh-tunnel)
-      - [https](#https)
-      - [SSH Tunnel](#ssh-tunnel)
-    - [tunnelbot User](#tunnelbot-user)
-  - [Troubleshooting](#troubleshooting)
+
+- [Installation JupyterHub Server](#installation-jupyterhub-server)
+  - [SSH tunnel user](#ssh-tunnel-user)
+  - [Node mapping](#node-mapping)
+- [Installation HPC System](#installation-hpc-system)
+  - [Requirements](#requirements-1)
+  - [Clone Repository](#clone-repository)
+  - [Singularity Container](#singularity-container)
+    - [Build Singularity Container](#build-singularity-container)
+      - [Compute](#compute)
+      - [GPU (Tensorflow)](#gpu-tensorflow)
+  - [Configuration Wizard for Slurm](#configuration-wizard-for-slurm)
+    - [Start the configuration wizard](#start-the-configuration-wizard)
+- [Examples](#examples)
+- [Logging](#logging)
+  - [Debug mode](#debug-mode)
+- [Shibboleth Integration](#shibboleth-integration)
+- [nbgrader Integration](#nbgrader-integration)
+  - [Installation](#installation)
+  - [Changing the Student ID to the JupyterHub logged in user name](#changing-the-student-id-to-the-jupyterhub-logged-in-user-name)
+  - [Create nbgrader_config.py](#create-nbgrader_configpy)
+- [Using WebDAV](#using-webdav)
+- [Security Precautions](#security-precautions)
+  - [Singularity Host Filesystems](#singularity-host-filesystems)
+  - [JupyterHub API (https or SSH tunnel)](#jupyterhub-api-https-or-ssh-tunnel)
+    - [https](#https)
+    - [SSH Tunnel](#ssh-tunnel)
+  - [tunnelbot User](#tunnelbot-user)
+- [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -50,25 +50,38 @@ The technical core of this project is the transparent integration of digital wor
 
 ## Installation JupyterHub Server
 
-### Requirements
+This section describes the required installations and configurations on the JupyterHub server.
 
-* JupyterHub
-* batchspawner (https://github.com/jupyterhub/batchspawner)
-* A user (called tunnelbot or whatever)
-  * This user is responsible two start a SSH tunnel between the compute node and the JupyterHub server
-  * A SSH Key Pair
+### JupyterHub and BatchSpawner
 
-1. See _examples/jupyterhub_config.py_ for more information
+The first thing you should do is install JupyterHub and BatchSpawner. For this purpose we provide an Ansible playbook which can be found in `/jupyterhub-deployment/`. The the README for details. Alternatively, you can follow the official installation instructions.
+
+If you decide to do the installations yourself, please proceed as follows:
+
+- install [JupyterHub](https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html)
+- install [BatchSpawner](https://github.com/jupyterhub/batchspawner)
+- copy the JupyterHub configuration (`/jupyterhub-deployment/config_files/jupyterhub_config.py`) to `/opt/jupyterhub/etc/jupyterhub/`
+- restart the JupyterHub service
+
+### SSH tunnel user
+
+A user called ´tunnelbot´ is needed on the JupyterHub server. This user is responsible for starting an SSH tunnel between the compute node and the JupyterHub server. An SSH key pair for the above mentioned purpose must be generated. See ´/examples/jupyterhub_config.py´ for more information.
 
 ### Node mapping
 
-The JupyterHub extracts the execution host name of the HPC system (e.g. cnode-003).
-When a notebook server is started, an SSH tunnel is established using the notebook port. 
+JupyterHub extracts the execution host name of the HPC system (e.g. ´node01-002´). When a notebook server is started, an SSH tunnel is established using the notebook port.
 
-In order for JupyterHub to resolve the compute nodes hostname, the _/etc/hosts_ file must be edited.
-An example entry might look like the following:
+In order for JupyterHub to be able to resolve the compute nodes host name, the ´/etc/hosts´ file must be edited. An example entry might look like the following:
 
-* `cnode-014 127.0.0.1`
+´´´
+127.0.0.1 node01-001
+127.0.0.1 node01-002
+127.0.0.1 node01-003
+...
+127.0.0.1 node12-048
+´´´
+
+The actual node names depend on your HPC system of course.
 
 ---
 
