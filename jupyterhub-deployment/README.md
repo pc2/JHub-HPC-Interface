@@ -2,10 +2,10 @@
 
 The following installations and configurations are performed automatically:
 
-- Installation of JupyterHub
-- Installation of batch spawner
-- Installation of required tools (Git etc.)
-- Copying the configuration files
+- installation of [JupyterHub](https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html)
+- installation of [BatchSpawner](https://github.com/jupyterhub/batchspawner)
+- installation of required tools (Git etc.)
+- copying the configuration files
 - JupyterHub restart
 
 ## Requirements
