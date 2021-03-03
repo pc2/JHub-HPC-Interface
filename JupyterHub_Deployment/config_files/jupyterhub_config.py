@@ -1,43 +1,205 @@
 # Configuration file for jupyterhub.
 c = get_config();
-c.JupyterHub.hub_ip = '0.0.0.0'
+#c.JupyterHub.hub_ip = '0.0.0.0';
+#c.ConfigurableHTTPProxy.api_url = 'http://127.0.0.1:8081'
+
+### IMPORTANT 
+public_fe_connect='juphuser@131.234.58.16';
+# This directory should contain all wrapper scripts
+hpc_dir="/scratch/hpc-lco-jupyter/"
+# RegEx: compute nodes of the HPC system
+state_exechost_re = '(^node[0-9][0-9]-[0-9][0-9][0-9]|^gpu[0-9][0-9][0-9])'
+# Pending status of a job 
+state_pending_re = r'PENDING|ALLOCATING'
+# Running status of a job
+state_running_re = r'ALLOCATED'
 
 ### SSL Config
+
 c.JupyterHub.port = 443
 c.JupyterHub.ssl_key = '/opt/jupyterhub/etc/jupyterhub/ssl/jh_key.pem'
 c.JupyterHub.ssl_cert = '/opt/jupyterhub/etc/jupyterhub/ssl/jh_certificate.pem'
 
-
-# TEST JHUB API HTTPS
-#c.HubAuth.certfile = "/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/user-$JUPYTERHUB_USER.crt";
-#c.HubAuth.keyfile = "/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/user-$JUPYTERHUB_USER.key";
-#c.HubAuth.client_ca = "/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/notebooks-ca_trust.crt";
+### Page Announcement
+c.JupyterHub.template_vars = {'announcement': 'HPC System: Cluster is currently in maintenance mode!'}
 
 # Redirect HTTP to HTTPS
 c.ConfigurableHTTPProxy.command = ['configurable-http-proxy', '--redirect-port', '80']
 
+# mawi API Test
+c.Authenticator.admin_access = False;
+
 ### General Config
-c.JupyterHub.spawner_class = 'wrapspawner.ProfilesSpawner'
+c.JupyterHub.cleanup_servers = True
+
+# storing secret login cookies
+c.JupyterHub.cookie_secret_file = '/opt/jupyterhub/cookie_secret';
+
+# database
+c.JupyterHub.db_url = '/opt/jupyterhub/jupyterhub.sqlite';
+
 import batchspawner
+from batchspawner import BatchSpawnerRegexStates
+from traitlets import ( 
+    Integer, Unicode, Float, Dict, default 
+)
+from wrapspawner import ProfilesSpawner
 
-# ProfileSpawner Config
-c.ProfilesSpawner.profiles = [
-    ("OCuLUS - 1 core, 2G RAM, 2 hours running time", 'cv2012_1c2g2h', 'batchspawner.OpenCCSSpawner', dict(req_nprocs='1', req_runtime='2h', req_memory='2g')),
-    ("OCuLUS - 2 core, 4G RAM, 4 hours running time", 'cv2012_2c4g4h', 'batchspawner.OpenCCSSpawner', dict(req_nprocs='2', req_runtime='4h', req_memory='4g')),
-    ("OCuLUS - 8 core, 8G RAM, 6 hours running time", 'cv2012_8c8g6h', 'batchspawner.OpenCCSSpawner', dict(req_nprocs='8', req_runtime='6h', req_memory='8g')),
-    ("OCuLUS - 8 core, 8G RAM, 10 hours running time", 'cv2012_8c8g10h', 'batchspawner.OpenCCSSpawner', dict(req_nprocs='8', req_runtime='10h', req_memory='8g')),
-    ("OCuLUS - 8 core, 16G RAM, 10 hours running time", 'cv2012_8c16g10h', 'batchspawner.OpenCCSSpawner', dict(req_nprocs='8', req_runtime='10h', req_memory='16g')),
-]
+class RemoteHPCSpawner(BatchSpawnerRegexStates):
 
-c.OpenCCSSpawner.exec_prefix = '';
-c.OpenCCSSpawner.batchspawner_singleuser_cmd = '/scratch/hpc-lco-jupyter/jupyterhub/bin/batchspawner-singleuser';
-c.OpenCCSSpawner.notebook_dir = '/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/notebooks'                      
-c.OpenCCSSpawner.disable_user_config = False
-c.OpenCCSSpawner.start_timeout = 7200;
-c.OpenCCSSpawner.http_timeout = 7200;
-c.ProfilesSpawner.start_timeout = 7200;
-c.ProfilesSpawner.http_timeout = 7200;
-c.OpenCCSSpawner.args = ['--NotebookApp.terminals_enabled=False'];                                                           
+	env_var = "JUPYTERHUB_API_TOKEN,JPY_API_TOKEN,JUPYTERHUB_CLIENT_ID,JUPYTERHUB_OAUTH_CALLBACK_URL,JUPYTERHUB_USER,JUPYTERHUB_API_URL,JUPYTERHUB_BASE_URL,JUPYTERHUB_SERVICE_PREFIX"                                       
+	ssh_cmd = " ".join(["ssh", "-i", "/home/tunnelbot/.ssh/id_rsa", public_fe_connect, "env"] + [val+"=$"+val for val in env_var.split(",")]) + " " + hpc_dir
+	batch_submit_cmd = ssh_cmd + 'jh_startjob'
+	batch_query_cmd = ssh_cmd + 'jh_gethoststate {job_id}'
+	batch_cancel_cmd = ssh_cmd + 'jh_killjob {job_id}'
+	state_exechost_re = state_exechost_re
+	state_pending_re = state_pending_re
+	state_running_re = state_running_re
+
+	req_webdavurl = Unicode('',
+	help="WebDAV URL. Mount WebDAV Share with FUSE as user notebook directory"
+	).tag(config=True)
+	req_davusername = Unicode('',
+	help="Username for req_webdavurl"
+	).tag(config=True)
+	req_davtoken = Unicode('',
+	help="Password/Token for req_webdavurl"
+	).tag(config=True)
+
+	def parse_job_id(self, output):
+		# make sure jobid is really an integer
+		try:
+			int(output)
+		except Exception as e:
+			self.log.error("CustomHPCSpawner unable to extract job ID from output: " + output)
+			raise e
+		return output
+
+
+class RemoteHPCSpawner_OpenCCS (RemoteHPCSpawner):
+	
+	batch_script = """#!/bin/bash
+    {% if ngpus %}
+    #CCS --res="rset=1:ncpus={{nprocs}}:mem={{memory}}:vmem=60g:{{ngpus}}"
+    {% else %}
+    #CCS --res="rset=1:ncpus={{nprocs}}:mem={{memory}}"
+    {% endif %}
+    {% if notifymail %}
+    #CCS --mail={{notifymail}}
+    #CCS --notifyjob=/scratch/hpc-lco-jupyter/jh_notifyuser,15m
+    #CCS --notifyuser=abe
+    {% endif %}
+    #CCS -t {{runtime}}
+    #CCS -N {{username}}
+
+    # $hpcuser_dir should contain all wrapper scripts (jh_startjob, jh_killjob, ...)
+    hpcuser_dir=/scratch/hpc-lco-jupyter/
+    source $hpcuser_dir/jh_config
+
+    {% if webdavurl %}
+        export WDURL={{webdavurl}}
+        export WDUN={{davusername}}
+        export WDT={{davtoken}}
+    {% endif %}
+
+    #function run_job () {
+    {% if ngpus %}
+    JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment gpu {{cmd}}
+    {% else %}
+    JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment compute {{cmd}}
+    {% endif %}
+    #}
+
+    # if the user is new (file $home_dir/.{{username}}.is_new exists) then check if the created overlay in jh_startjob is ready to use
+    #if [[ -f $home_dir/.{{username}}.is_new ]]; then
+    #    # get current setting from jh_config (e.g. 6144)
+    #    current_overlay_size_setting=$(cat $scratch_dir/jh_config | grep "^overlay_size" | cut -d "=" -f 2)
+    #    sleep 2
+    #    while (true); do
+    #            # check whether overlay file is an ext3 image
+    #            ext3_overlay=$(file $overlay_location | grep ext3)
+    #            if [[ $? -eq 0 ]]; then
+    #                # if exit code is zero -> break and its ready to use
+    #                sleep 1
+    #                rm $home_dir/.{{username}}.is_new
+    #                create_log_entry "DEBUG" "[Singularity Overlay] Overlay $overlay_location seems to be an ext3 overlay!"
+    #                break
+    #            else
+    #                continue
+    #            fi
+    #    done
+    #fi
+
+    #run_job
+	"""
+
+class CustomProfilesSpawner(ProfilesSpawner):
+	profiles = [
+	#("LocalSpawner", 'localspawn', 'jupyterhub.spawner.LocalProcessSpawner', {'notebook_dir': '/home/{username}'}),
+	("HPC System - 1 core, 2G RAM, 2 hours running time", 'cv2012_1c2g2h', RemoteHPCSpawner_OpenCCS, {'notebook_dir': '/notebooks/', 'req_nprocs': '1', 'req_runtime': '2h', 'req_memory': '2g'}),
+	("HPC System - 2 core, 4G RAM, 4 hours running time", 'cv2012_2c4g4h', RemoteHPCSpawner_OpenCCS, dict(notebook_dir='/notebooks/',req_nprocs='2', req_runtime='4h', req_memory='4g')),
+	("HPC System - 8 core, 8G RAM, 6 hours running time", 'cv2012_8c8g6h', RemoteHPCSpawner_OpenCCS, dict(notebook_dir='/notebooks/',req_nprocs='8', req_runtime='6h', req_memory='8g')),
+	("HPC System GPU - 1x Random GPU (Tesla K20x, GTX1080 or RTX2080), 2 core, 8G RAM, 60G vmem, 5 hours running time", 'cv2012_8c16g10h1k20', RemoteHPCSpawner_OpenCCS, dict(notebook_dir='/notebooks/',req_nprocs='2', req_runtime='5h', req_memory='8g', req_ngpus='gpus=1')),
+	]
+
+	form_template = """
+	<div class="form-group">
+	<label for="profile">Select a job profile:</label>
+	<select class="form-control" name="profile" required autofocus>
+	{input_template}
+	</select>
+	</div>
+
+	<div class="form-group">
+	<center><h3>Include WebDAV</h3></center>
+	<div class="alert alert-info" role="alert">
+  	You have the option to include a WebDAV share (e.g. sciebo) to manage and launch your Jupyter notebooks from the cloud. If you do not want to use this feature, just leave it blank
+	</div>
+	<label for="input_webdav">WebDAV URL</label>
+	<input class="form-control" name="req_webdavurl" placeholder="e.g. https://websrv.sciebo.de/remote.php/dav/files/maxius"></input>
+	<label for="input_username">Username</label>
+	<input class="form-control" name="req_davusername" placeholder="e.g. maxius"></input>
+	<label for="input_token" id="tokenlbl">Application Access Token</label>
+	<input type="password" class="form-control" name="req_davtoken" aria-describedby="passwordHelpBlock" placeholder="e.g. ASDKH2sd2o2d8ao28sd"></input>
+	
+	<small id="passwordHelpBlock" class="form-text text-muted">
+	Important: You have to create an access token in your security settings. Do not use your normal password.
+	</small>
+	</div>
+	<div class="alert alert-warning" role="alert">
+  	When you are done with your work, it would be great if you stop your instance manually. Then there will be more resources available for everyone.
+	</div>
+	"""
+
+	def options_from_form(self, formdata):
+		options = {};
+		options['profile'] = formdata.get('profile', [self.profiles[0][1]])[0];
+		options['req_webdavurl'] = str(formdata['req_webdavurl'][0]);
+		options['req_davusername'] = str(formdata['req_davusername'][0]);
+		options['req_davtoken'] = str(formdata['req_davtoken'][0]);
+		return options;
+
+	def construct_child(self):
+		self.child_profile = self.user_options.get('profile', "")
+		self.select_profile(self.child_profile)
+		self.child_config["req_webdavurl"] = self.user_options.get('req_webdavurl')
+		self.child_config["req_davusername"] = self.user_options.get('req_davusername')
+		self.child_config["req_davtoken"] = self.user_options.get('req_davtoken')
+		super().construct_child()
+
+
+
+c.JupyterHub.spawner_class = CustomProfilesSpawner;
+
+c.CustomProfilesSpawner.default_url = '';
+
+c.RemoteHPCSpawner.exec_prefix = '';
+c.RemoteHPCSpawner.batchspawner_singleuser_cmd = 'batchspawner-singleuser';
+c.RemoteHPCSpawner.disable_user_config = True
+c.RemoteHPCSpawner.poll_interval = 10;
+c.RemoteHPCSpawner.notebook_dir = '/notebooks/';
+
+c.CustomProfilesSpawner.start_timeout = 180; # wait 180 seconds
 
 #------------------------------------------------------------------------------
 # Application(SingletonConfigurable) configuration
