@@ -132,7 +132,7 @@ function additional_config () {
 			if $usesingu; then
 				while (true); do
 					echo "We need to know which container should be started when the job starts on a regular compute node"
-					def_compute_s="$PROJECT_GROUP/SINGULARITY/compute_jupyter.img"
+					def_compute_s="$PROJECT_GROUP/SINGULARITY/compute_jupyter.sif"
 					read -p "Path to container [$def_compute_s]: " computecon
 					if [[ $computecon == "" ]]; then
 						if [[ ! -f $computecon ]]; then
@@ -159,7 +159,7 @@ function additional_config () {
 				while (true); do
 					echo "We need to know which container should be started when the job starts on a GPU node"
 					echo "If you dont want to use GPUs, just leave it blank"
-					def_gpu_s="$PROJECT_GROUP/SINGULARITY/gpu_jupyter.img"
+					def_gpu_s="$PROJECT_GROUP/SINGULARITY/gpu_jupyter.sif"
 					read -p "Path to container [$def_gpu_s]: " gpucon
 					if [[ $gpucon == "" ]]; then
 						if [[ ! -f $gpucon ]]; then

@@ -2,10 +2,10 @@
 # Info: In case of a change no service has to be restarted, because the configuration file is re-read when the wrapper scripts are started.
 
 ######## MAINTENANCE MODE #######
-is_cluster_in_maintenance=true
+is_cluster_in_maintenance=false
 
 # Only following user can start a job if maintenance is active
-maintenance_only_user="mwi"
+maintenance_only_user=""
 ##################################
 
 ######## GENERAL PROJECT INFORMATION ########
@@ -64,11 +64,11 @@ user_log_directory=$user_home_dir/JupyterHub-Log/
 # syntax: --bind "SOURCE:DEST:OPTS" (COMMA SEPERATED)
 use_singularity=true
 singularity_bind_fix="$scratch_dir/jh_batchspawner_singleuser_replace:/opt/batchspawner/batchspawner/singleuser.py:ro,$scratch_dir/jh_starttunnel:/opt/.jh_starttunnel:ro"
-singularity_bind_extra="$user_log_directory:/notebooks/JupyterHub-Log/:ro,/scratch/hpc-lco-jupyter/NBGRADER/exchange:/srv/nbgrader/exchange/,$scratch_dir/NBGRADER/courses:/srv/nbgrader/courses/,$scratch_dir/NBGRADER/global_config/nbgrader_config.py:/usr/local/etc/jupyter/nbgrader_config.py:ro"
+singularity_bind_extra=""
 singularity_bind="$singularity_bind_fix,$singularity_bind_extra"
 
-singularity_no_mount="hostfs,home"
-singularity_home_dir="/userhome/"
+singularity_no_mount=""
+singularity_home_dir=""
 singularity_extra_args=""
 
 # Size of overlay image for singularity and user space (Megabytes)
@@ -79,12 +79,12 @@ create_overlay_cmd="dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_si
 create_ext3_overlay_cmd="$scratch_dir/e2fsprogs/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location"
 
 # set which container directory should start for a specific note type (e.g. compute or gpu node)
-container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc_jovyan.sif
-container_to_start_gpu=$scratch_dir/SINGULARITY/jupyterhub_hpc_gpu.sif
+container_to_start_compute=
+container_to_start_gpu=
 
 # enable debug mode
-# more output at jhlog 
-enable_debug_mode=true
+# more output at jhlog
+enable_debug_mode=false
 
 # enable logging in $log_dir directory
 enable_logging=true
@@ -97,7 +97,7 @@ log_dir=$scratch_dir/log
 cmd_load_singularity="module load singularity"
 
 # WebDAV
-enable_webdav=true
+enable_webdav=false
 webdav_mount_dir=$user_home_dir/webdav_mount/
 webdav_mount_dir_container=/notebooks/WebDAV-Share/
 ## can be ignoried. The webdav variables will be passed to the wrapper script ja_start_singularity_environment to mount webdav
