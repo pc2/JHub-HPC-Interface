@@ -19,22 +19,22 @@ external_hub_url="http://127.0.0.1:8083/hub/api"
 cmd_run_job='sbatch --parsable'
 cmd_run_job_debug='sbatch --parsable'
 # cmd_run_job_filter will be applied on cmd_run_job and cmd_run_job_debug
-cmd_run_job_filter=''
+cmd_run_job_filter='cat'
 
 cmd_kill_job='scancel $JOBID'
 
 cmd_job_owner='squeue -ho %.j -j $JOBID'
-cmd_job_owner_filter=''
+cmd_job_owner_filter='cat'
 
 cmd_job_batchfile='ccsinfo -s --mine --raw --fmt=%b $JOBID'
 cmd_job_batchfile_filter='cut -d " " -f2'
 
 # The output of cmd_job_state should only cotain the job state
 cmd_job_state='squeue -ho %.T -j $JOBID'
-cmd_job_state_filter=''
+cmd_job_state_filter='cat'
 
 cmd_job_get_mapped_node='squeue -ho %.B -j $JOBID'
-cmd_job_get_mapped_node_filter=''
+cmd_job_get_mapped_node_filter='cat'
 
 cluster_job_is_running='RUNNING COMPLETING'
 cluster_job_is_stopped='COMPLETED'

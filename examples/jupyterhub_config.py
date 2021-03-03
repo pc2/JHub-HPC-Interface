@@ -7,11 +7,11 @@ public_fe_connect='jhhpcclient@12.13.14.15'; # HPCUser@HPCIP
 # This directory should contain all wrapper scripts
 hpc_dir="/scratch/hpc-jh/"
 # RegEx: compute nodes of the HPC system
-state_exechost_re = '(^node[0-9][0-9]-[0-9][0-9][0-9]|^gpu[0-9][0-9][0-9])'
+state_exechost_re = '(^node[0-9][0-9]-[0-9][0-9][0-9])'
 # Pending status of a job
-state_pending_re = r'PENDING|ALLOCATING'
+state_pending_re = r'PENDING|CONFIGURING'
 # Running status of a job
-state_running_re = r'ALLOCATED'
+state_running_re = r'RUNNING|COMPLETING'
 
 #### SPAWNER CONFIGURATION ####
 
@@ -21,76 +21,14 @@ c.JupyterHub.port = 443
 c.JupyterHub.ssl_key = '/opt/jupyterhub/etc/jupyterhub/ssl/jupyterhub_key.pem'
 c.JupyterHub.ssl_cert = '/opt/jupyterhub/etc/jupyterhub/ssl/jupyterhub_certificate.pem'
 
-### Page Announcement
-#c.JupyterHub.template_vars = {'announcement': 'OCuLUS: Cluster is currently in maintenance mode!'}
-
-# Redirect HTTP to HTTPS
 c.ConfigurableHTTPProxy.command = ['configurable-http-proxy', '--redirect-port', '80']
 
-# storing secret login cookies
-c.JupyterHub.cookie_secret_file = '/opt/jupyterhub/cookie_secret';
-
-# database
-c.JupyterHub.db_url = '/opt/jupyterhub/jupyterhub.sqlite';
-
 import batchspawner
+from traitlets import (
+    Integer, Unicode, Float, Dict, default
+)
 from batchspawner import BatchSpawnerRegexStates
 from wrapspawner import ProfilesSpawner
-
-class CustomProfilesSpawner(ProfilesSpawner):
-	# PROFILESSPAWNER PROFILES
-	profiles = [
-	("HPC Cluster - 1 core, 2G RAM, 2 hours running time", 'hpc_t1', RemoteHPCSpawner_Slurm, dict(req_nprocs='1', req_runtime='2h', req_memory='2g')),
-	("HPC Cluster - 2 core, 4G RAM, 4 hours running time", 'hpc_t2', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='4h', req_memory='4g')),
-	("HPC Cluster GPU - 1x GTX1080Ti, 2 core, 8G RAM, 60G vmem, 5 hours running time", 'hpc_gpu', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='5h', req_memory='8g', req_ngpus='gpus=1')),
-	]
-
-	form_template = """
-	<div class="form-group">
-	<label for="profile">Select a job profile:</label>
-	<select class="form-control" name="profile" required autofocus>
-	{input_template}
-	</select>
-	</div>
-
-	<div class="form-group">
-	<center><h3>Include WebDAV</h3></center>
-	<div class="alert alert-info" role="alert">
-  	You have the option to include a WebDAV share (e.g. sciebo) to manage and launch your Jupyter notebooks from the cloud. If you do not want to use this feature, just leave it blank
-	</div>
-	<label for="input_webdav">WebDAV URL</label>
-	<input class="form-control" name="req_webdavurl" placeholder="e.g. https://websrv.sciebo.de/remote.php/dav/files/maxius"></input>
-	<label for="input_username">Username</label>
-	<input class="form-control" name="req_davusername" placeholder="e.g. maxius"></input>
-	<label for="input_token" id="tokenlbl">Application Access Token</label>
-	<input type="password" class="form-control" name="req_davtoken" aria-describedby="passwordHelpBlock" placeholder="e.g. ASDKH2sd2o2d8ao28sd"></input>
-	
-	<small id="passwordHelpBlock" class="form-text text-muted">
-	Important: You have to create an access token in your security settings. Do not use your normal password.
-	</small>
-	</div>
-	<div class="alert alert-warning" role="alert">
-  	When you are done with your work, it would be great if you stop your instance manually. Then there will be more resources available for everyone.
-	</div>
-	"""
-
-	def options_from_form(self, formdata):
-		options = {};
-		options['profile'] = formdata.get('profile', [self.profiles[0][1]])[0];
-		options['req_webdavurl'] = str(formdata['req_webdavurl'][0]);
-		options['req_davusername'] = str(formdata['req_davusername'][0]);
-		options['req_davtoken'] = str(formdata['req_davtoken'][0]);
-		return options;
-
-	def construct_child(self):
-		self.child_profile = self.user_options.get('profile', "")
-		self.select_profile(self.child_profile)
-		self.child_config["req_webdavurl"] = self.user_options.get('req_webdavurl')
-		self.child_config["req_davusername"] = self.user_options.get('req_davusername')
-		self.child_config["req_davtoken"] = self.user_options.get('req_davtoken')
-		super().construct_child()
-
-c.JupyterHub.spawner_class = CustomProfilesSpawner;
 
 class RemoteHPCSpawner(BatchSpawnerRegexStates):
 
@@ -122,78 +60,93 @@ class RemoteHPCSpawner(BatchSpawnerRegexStates):
 			raise e
 		return output
 
-
-class RemoteHPCSpawner_OpenCCS (RemoteHPCSpawner):
-	
-	batch_script = """#!/bin/bash
-    {% if ngpus %}
-    #CCS --res="rset=1:ncpus={{nprocs}}:mem={{memory}}:vmem=60g:{{ngpus}}"
-    {% else %}
-    #CCS --res="rset=1:ncpus={{nprocs}}:mem={{memory}}"
-    {% endif %}
-    {% if notifymail %}
-    #CCS --mail={{notifymail}}
-    #CCS --notifyjob=/scratch/hpc-lco-jupyter/jh_notifyuser,15m
-    #CCS --notifyuser=abe
-    {% endif %}
-    #CCS -t {{runtime}}
-    #CCS -N {{username}}
-
-    # $hpcuser_dir should contain all wrapper scripts (jh_startjob, jh_killjob, ...)
-    hpcuser_dir=/scratch/hpc-lco-jupyter/
-    source $hpcuser_dir/jh_config
-
-    {% if webdavurl %}
-        export WDURL={{webdavurl}}
-        export WDUN={{davusername}}
-        export WDT={{davtoken}}
-    {% endif %}
-
-    {% if ngpus %}
-    JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment gpu {{cmd}}
-    {% else %}
-    JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment compute {{cmd}}
-    {% endif %}
-	"""
-
 class RemoteHPCSpawner_Slurm (RemoteHPCSpawner):
 	
 	batch_script = """#!/bin/bash
-    #SBATCH --job-name={{username}}
-    #SBATCH --export={{keepvars}}
-    #SBATCH --get-user-env=L
-    #SBATCH --output=/scratch/test-jupyterhub/JOBLOGT
-    {% if partition  %}#SBATCH --partition={{partition}}
-    {% endif %}{% if runtime    %}#SBATCH --time={{runtime}}
-    {% endif %}{% if memory     %}#SBATCH --mem={{memory}}
-    {% endif %}{% if nprocs     %}#SBATCH --cpus-per-task={{nprocs}}
-    {% endif %}{% if reservation%}#SBATCH --reservation={{reservation}}
-    {% endif %}{% if options    %}#SBATCH {{options}}{% endif %}
+#SBATCH --job-name={{username}}
+#SBATCH --export={{keepvars}}
+#SBATCH --get-user-env=L
+#SBATCH --output=/scratch/test-jupyterhub/JOBLOGT
+{% if partition  %}#SBATCH --partition={{partition}}
+{% endif %}{% if runtime    %}#SBATCH --time={{runtime}}
+{% endif %}{% if memory     %}#SBATCH --mem={{memory}}
+{% endif %}{% if nprocs     %}#SBATCH --cpus-per-task={{nprocs}}
+{% endif %}{% if reservation%}#SBATCH --reservation={{reservation}}
+{% endif %}{% if options    %}#SBATCH {{options}}{% endif %}
 
-    # $hpcuser_dir should contain all wrapper scripts (jh_startjob, jh_killjob, ...)
-    hpcuser_dir=/scratch/hpc-lco-jupyter/
-    source $hpcuser_dir/jh_config
+# $hpcuser_dir should contain all wrapper scripts (jh_startjob, jh_killjob, ...)
+hpcuser_dir=/scratch/hpc-lco-jupyter/
+source $hpcuser_dir/jh_config
 
-    {% if webdavurl %}
-        export WDURL={{webdavurl}}
-        export WDUN={{davusername}}
-        export WDT={{davtoken}}
-    {% endif %}
+{% if webdavurl %}
+    export WDURL={{webdavurl}}
+    export WDUN={{davusername}}
+    export WDT={{davtoken}}
+{% endif %}
 
-    {% if ngpus %}
-    JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment gpu {{cmd}}
-    {% else %}
-    JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_singularity_environment compute {{cmd}}
-    {% endif %}
+{% if ngpus %}
+JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment gpu {{cmd}}
+{% else %}
+JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment compute {{cmd}}
+{% endif %}
 	"""
 
-c.RemoteHPCSpawner.exec_prefix = '';
-c.RemoteHPCSpawner.batchspawner_singleuser_cmd = 'batchspawner-singleuser';
-c.RemoteHPCSpawner.disable_user_config = True
+class CustomProfilesSpawner(ProfilesSpawner):
+	# PROFILESSPAWNER PROFILES
+	profiles = [
+    ("HPC Cluster - 1 core, 2G RAM, 2 hours running time", 'hpc_t1', RemoteHPCSpawner_Slurm, dict(req_nprocs='1', req_runtime='"2:00:00', req_memory='2g')),
+    ("HPC Cluster - 2 core, 4G RAM, 4 hours running time", 'hpc_t2', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='4:00:00', req_memory='4g')),
+    ("HPC Cluster GPU - 1x GTX1080Ti, 2 core, 8G RAM, 60G vmem, 5 hours running time", 'hpc_gpu', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='5:00:00', req_memory='8g', req_ngpus='gpus=1')),
+	]
 
-c.CustomProfilesSpawner.default_url = '';
-c.CustomProfilesSpawner.notebook_dir = '/notebooks'                      
-c.CustomProfilesSpawner.start_timeout = 180; # wait 180 seconds
+	form_template = """
+	<div class="form-group">
+	<label for="profile">Select a job profile:</label>
+	<select class="form-control" name="profile" required autofocus>
+	{input_template}
+	</select>
+	</div>
+
+	<!--<div class="form-group">
+	<center><h3>Include WebDAV</h3></center>
+	<div class="alert alert-info" role="alert">
+  	You have the option to include a WebDAV share (e.g. sciebo) to manage and launch your Jupyter notebooks from the cloud. If you do not want to use this feature, just leave it blank
+	</div>
+	<label for="input_webdav">WebDAV URL</label>
+	<input class="form-control" name="req_webdavurl" placeholder="e.g. https://websrv.sciebo.de/remote.php/dav/files/maxius"></input>
+	<label for="input_username">Username</label>
+	<input class="form-control" name="req_davusername" placeholder="e.g. maxius"></input>
+	<label for="input_token" id="tokenlbl">Application Access Token</label>
+	<input type="password" class="form-control" name="req_davtoken" aria-describedby="passwordHelpBlock" placeholder="e.g. ASDKH2sd2o2d8ao28sd"></input>
+	
+	<small id="passwordHelpBlock" class="form-text text-muted">
+	Important: You have to create an access token in your security settings. Do not use your normal password.
+	</small>
+	</div>-->
+	<div class="alert alert-warning" role="alert">
+  	When you are done with your work, it would be great if you stop your instance manually. Then there will be more resources available for everyone.
+	</div>
+	"""
+
+	def options_from_form(self, formdata):
+		options = {};
+		options['profile'] = formdata.get('profile', [self.profiles[0][1]])[0];
+		#options['req_webdavurl'] = str(formdata['req_webdavurl'][0]);
+		#options['req_davusername'] = str(formdata['req_davusername'][0]);
+		#options['req_davtoken'] = str(formdata['req_davtoken'][0]);
+		return options;
+
+	def construct_child(self):
+		self.child_profile = self.user_options.get('profile', "")
+		self.select_profile(self.child_profile)
+		#self.child_config["req_webdavurl"] = self.user_options.get('req_webdavurl')
+		#self.child_config["req_davusername"] = self.user_options.get('req_davusername')
+		#self.child_config["req_davtoken"] = self.user_options.get('req_davtoken')
+		super().construct_child()
+
+c.JupyterHub.spawner_class = CustomProfilesSpawner;
+
+c.RemoteHPCSpawner.exec_prefix = '';
 
 #------------------------------------------------------------------------------
 # Application(SingletonConfigurable) configuration

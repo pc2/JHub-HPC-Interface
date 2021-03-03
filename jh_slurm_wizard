@@ -21,11 +21,11 @@ function create_temp_config () {
 	sed -i "s;^home_dir=.*;home_dir=$HOME_DIR;" $temp_jh_config
 	sed -i "s;^use_singularity=.*;use_singularity=$USE_SINGULARITY;" $temp_jh_config
 	sed -i "s;^overlay_size=.*;overlay_size=$OVERLAY_SIZE;" $temp_jh_config
-	sed -i "s;^create_ext3_overlay_cmd=.*;create_ext3_overlay_cmd="$CREATE_EXT3_OVERLAY_CMD";" $temp_jh_config
+	sed -i "s;^create_ext3_overlay_cmd=.*;create_ext3_overlay_cmd=\"$CREATE_EXT3_OVERLAY_CMD\";" $temp_jh_config
 	sed -i "s;^container_to_start_compute=.*;container_to_start_compute=$CONTAINER_TO_START_COMPUTE;" $temp_jh_config
 	sed -i "s;^container_to_start_gpu=.*;container_to_start_gpu=$CONTAINER_TO_START_GPU;" $temp_jh_config
 	sed -i "s;^enable_logging=.*;enable_logging=$ENABLE_LOGGING;" $temp_jh_config
-	sed -i "s;^cmd_load_singularity=.*;cmd_load_singularity="$CMD_LOAD_SINGULARITY";" $temp_jh_config
+	sed -i "s;^cmd_load_singularity=.*;cmd_load_singularity=\"$CMD_LOAD_SINGULARITY\";" $temp_jh_config
 
 	echo "#############################################################"
 	echo "#############################################################"

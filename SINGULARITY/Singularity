@@ -29,11 +29,6 @@ From: debian
     chown jovyan /userhome/
     chown -R jovyan /usr/
 
-    ##### GLOBAL JUPYTER CONFIG FILE #####
-    mkdir -p /etc/jupyter/
-    touch /etc/jupyter/jupyter_notebook_config.py
-    echo "c.NotebookApp.notebook_dir='/notebooks'" > /etc/jupyter/jupyter_notebook_config.py
-
 %environment
     export NB_USER=jovyan
     export NB_UID=USER_ID
