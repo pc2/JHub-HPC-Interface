@@ -98,7 +98,6 @@ The actual node names depend on your HPC system of course.
 * __Singularity (> v.3.7.0)__ (If you want to use Singularity)
 * e2fsprogs with following option:
   * https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/commit/?id=217c0bdf17899c0f79b73f76feeadd6d55863180
-* A directory to create a valid overlay for Singularity (See the official docs: https://sylabs.io/docs/)
 
 ### Clone Repository
 
