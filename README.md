@@ -257,3 +257,11 @@ usermod -s /bin/false tunnelbot
 ---
 
 ## Troubleshooting
+
+When problems occur with the JupyterHub, some information can be obtained from the logs when debug mode is enabled:
+
+https://github.com/jupyterhub/jupyterhub/wiki/Debug-Jupyterhub
+
+If you encounter problems with the wrapper scripts, you can get help at _docs/troubleshooting.md_:
+
+[Troubleshooting](docs/troubleshooting.md)
