@@ -66,7 +66,6 @@ class RemoteHPCSpawner_Slurm (RemoteHPCSpawner):
 #SBATCH --job-name={{username}}
 #SBATCH --export={{keepvars}}
 #SBATCH --get-user-env=L
-#SBATCH --output=/scratch/test-jupyterhub/JOBLOGT
 {% if partition  %}#SBATCH --partition={{partition}}
 {% endif %}{% if runtime    %}#SBATCH --time={{runtime}}
 {% endif %}{% if memory     %}#SBATCH --mem={{memory}}
@@ -94,9 +93,7 @@ JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment compute 
 class CustomProfilesSpawner(ProfilesSpawner):
 	# PROFILESSPAWNER PROFILES
 	profiles = [
-    ("HPC Cluster - 1 core, 2G RAM, 2 hours running time", 'hpc_t1', RemoteHPCSpawner_Slurm, dict(req_nprocs='1', req_runtime='"2:00:00', req_memory='2g')),
-    ("HPC Cluster - 2 core, 4G RAM, 4 hours running time", 'hpc_t2', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='4:00:00', req_memory='4g')),
-    ("HPC Cluster GPU - 1x GTX1080Ti, 2 core, 8G RAM, 60G vmem, 5 hours running time", 'hpc_gpu', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='5:00:00', req_memory='8g', req_ngpus='gpus=1')),
+    ("HPC Cluster - 2 cores, 2 hours running time", 'hpc_t1', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='"2:00:00')),
 	]
 
 	form_template = """
