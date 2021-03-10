@@ -9,7 +9,7 @@ maintenance_only_user=""
 ##################################
 
 ######## GENERAL PROJECT INFORMATION ########
-scratch_dir=/scratch/hpc-lco-jupyter 
+scratch_dir=/scratch/HPC_DIR/ 
 external_hub_url="http://127.0.0.1:8083/hub/api"
 ############################################
 
@@ -25,9 +25,6 @@ cmd_kill_job='scancel $JOBID'
 
 cmd_job_owner='squeue -ho %.j -j $JOBID'
 cmd_job_owner_filter='cat'
-
-cmd_job_batchfile='ccsinfo -s --mine --raw --fmt=%b $JOBID'
-cmd_job_batchfile_filter='cut -d " " -f2'
 
 # The output of cmd_job_state should only cotain the job state
 cmd_job_state='squeue -ho %.T -j $JOBID'
@@ -51,10 +48,10 @@ sqlite_database_file=$scratch_dir/jh_database.db
 ssh_tunnel_api=true
 ssh_tunnel_api_port=8083
 ssh_tunnel_user_jh=tunnelbot
-ssh_jh_ip=194.13.83.158
+ssh_jh_ip=1.2.3.4
 ssh_priv_key=$(cat ~/.ssh/id_rsa)
 
-# Location of user home directories (can be changed, but why?)
+# if creating_user_homes is set to true, singularity overlays will be created
 creating_user_homes=true
 home_dir=$scratch_dir/HOME_DIRECTORIES
 user_home_dir=$home_dir/$JUPYTERHUB_USER/

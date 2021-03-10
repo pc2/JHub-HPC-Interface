@@ -2,45 +2,42 @@
 # Info: In case of a change no service has to be restarted, because the configuration file is re-read when the wrapper scripts are started.
 
 ######## MAINTENANCE MODE #######
-is_cluster_in_maintenance=true
+is_cluster_in_maintenance=false
 
 # Only following user can start a job if maintenance is active
-maintenance_only_user="mwi"
+maintenance_only_user=""
 ##################################
 
 ######## GENERAL PROJECT INFORMATION ########
-scratch_dir=/scratch/hpc-lco-jupyter 
+scratch_dir=/scratch/HPC_DIR/ 
 external_hub_url="http://127.0.0.1:8083/hub/api"
 ############################################
 
 ####### WORKLOAD MANAGER CONFIGURATION #######
 # In all wrapper scripts the variable $JOBID is available. So build your command with $JOBID 
 
-cmd_run_job='ccsalloc --quiet -g hpc-lco-jupyter --stderr=/dev/null --stdout=/scratch/hpc-lco-jupyter/HOME_DIRECTORIES/$JUPYTERHUB_USER/bind/notebooks/JupyterHub-Log/lastlog'
-cmd_run_job_debug='ccsalloc --quiet -g hpc-lco-jupyter --stdout=$scratch_dir/DEBUG_JOB.stdout --stderr=$scratch_dir/DEBUG_JOB.stderr'
+cmd_run_job='sbatch --parsable'
+cmd_run_job_debug='sbatch --parsable'
 # cmd_run_job_filter will be applied on cmd_run_job and cmd_run_job_debug
 cmd_run_job_filter='cat'
 
-cmd_kill_job='ccskill $JOBID'
+cmd_kill_job='scancel $JOBID'
 
-cmd_job_owner='ccsinfo -s --mine --raw --fmt=%N $JOBID'
+cmd_job_owner='squeue -ho %.j -j $JOBID'
 cmd_job_owner_filter='cat'
 
-cmd_job_batchfile='ccsinfo -s --mine --raw --fmt=%b $JOBID'
-cmd_job_batchfile_filter='cut -d " " -f2'
-
 # The output of cmd_job_state should only cotain the job state
-cmd_job_state='ccsinfo -s --mine --raw --fmt=%w $JOBID'
+cmd_job_state='squeue -ho %.T -j $JOBID'
 cmd_job_state_filter='cat'
 
-cmd_job_get_mapped_node='ccsinfo -s --mine --raw --fmt=%m $JOBID'
-cmd_job_get_mapped_node_filter='grep -o "^node[0-9][0-9]-[0-9][0-9][0-9]\|^gpu[0-9][0-9][0-9]"'
+cmd_job_get_mapped_node='squeue -ho %.B -j $JOBID'
+cmd_job_get_mapped_node_filter='cat'
 
-cluster_job_is_running='ALLOCATED ALLOCATING'
-cluster_job_is_stopped='STOPPED STOPPING'
+cluster_job_is_running='RUNNING COMPLETING'
+cluster_job_is_stopped='COMPLETED'
 cluster_job_is_planned='PLANNED PLANNING'
 
-job_environment_job_id='$CCS_REQID'
+job_environment_job_id='$SLURM_JOB_ID'
 ##############################################
 
 ####### DATABASE CONFIGURATION ########
@@ -51,10 +48,10 @@ sqlite_database_file=$scratch_dir/jh_database.db
 ssh_tunnel_api=true
 ssh_tunnel_api_port=8083
 ssh_tunnel_user_jh=tunnelbot
-ssh_jh_ip=194.13.83.158
+ssh_jh_ip=1.2.3.4
 ssh_priv_key=$(cat ~/.ssh/id_rsa)
 
-# Location of user home directories (can be changed, but why?)
+# if creating_user_homes is set to true, singularity overlays will be created
 creating_user_homes=true
 home_dir=$scratch_dir/HOME_DIRECTORIES
 user_home_dir=$home_dir/$JUPYTERHUB_USER/
@@ -64,11 +61,11 @@ user_log_directory=$user_home_dir/JupyterHub-Log/
 # syntax: --bind "SOURCE:DEST:OPTS" (COMMA SEPERATED)
 use_singularity=true
 singularity_bind_fix="$scratch_dir/jh_batchspawner_singleuser_replace:/opt/batchspawner/batchspawner/singleuser.py:ro,$scratch_dir/jh_starttunnel:/opt/.jh_starttunnel:ro"
-singularity_bind_extra="$user_log_directory:/notebooks/JupyterHub-Log/:ro,/scratch/hpc-lco-jupyter/NBGRADER/exchange:/srv/nbgrader/exchange/,$scratch_dir/NBGRADER/courses:/srv/nbgrader/courses/,$scratch_dir/NBGRADER/global_config/nbgrader_config.py:/usr/local/etc/jupyter/nbgrader_config.py:ro"
+singularity_bind_extra=""
 singularity_bind="$singularity_bind_fix,$singularity_bind_extra"
 
-singularity_no_mount="hostfs,home"
-singularity_home_dir="/userhome/"
+singularity_no_mount=""
+singularity_home_dir=""
 singularity_extra_args=""
 
 # Size of overlay image for singularity and user space (Megabytes)
@@ -79,12 +76,12 @@ create_overlay_cmd="dd if=/dev/zero of=$overlay_location bs=1M count=$overlay_si
 create_ext3_overlay_cmd="$scratch_dir/e2fsprogs/mke2fs -F -q -t ext3 -d $scratch_dir/overlay_root/ $overlay_location"
 
 # set which container directory should start for a specific note type (e.g. compute or gpu node)
-container_to_start_compute=$scratch_dir/SINGULARITY/jupyterhub_hpc_jovyan.sif
-container_to_start_gpu=$scratch_dir/SINGULARITY/jupyterhub_hpc_gpu.sif
+container_to_start_compute=
+container_to_start_gpu=
 
 # enable debug mode
-# more output at jhlog 
-enable_debug_mode=true
+# more output at jhlog
+enable_debug_mode=false
 
 # enable logging in $log_dir directory
 enable_logging=true
@@ -97,7 +94,7 @@ log_dir=$scratch_dir/log
 cmd_load_singularity="module load singularity"
 
 # WebDAV
-enable_webdav=true
+enable_webdav=false
 webdav_mount_dir=$user_home_dir/webdav_mount/
 webdav_mount_dir_container=/notebooks/WebDAV-Share/
 ## can be ignoried. The webdav variables will be passed to the wrapper script ja_start_singularity_environment to mount webdav
