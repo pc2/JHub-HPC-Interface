@@ -61,7 +61,7 @@ This section describes the required installations and configurations on the Jupy
 
 ### JupyterHub and BatchSpawner
 
-The first thing you should do is install JupyterHub and BatchSpawner. For this purpose we provide an Ansible playbook which can be found in `/jupyterhub-deployment/`. The the README for details. Alternatively, you can follow the official installation instructions.
+The first thing you should do is install JupyterHub and BatchSpawner. For this purpose we provide an Ansible playbook which can be found in `/jupyterhub-deployment/`. See the README for details. Alternatively, you can follow the official installation instructions.
 
 If you decide to do the installations yourself, please proceed as follows:
 
@@ -99,15 +99,15 @@ This section describes the required installations and configurations of the HPC 
 ### Requirements
 
 * You need a user who is allowed to allocate resources on the HPC system
-  * With a SSH key pair. The public part must be deposited on the JupyterHub serer (tunnelbot user)
-  * The public key part of the tunnelbot-user created on the JupyterHub (-> _~/.ssh/authorized_keys_)
+  * With a SSH key pair. The public part must be deposited on the JupyterHub serer (`tunnelbot` user)
+  * The public key part of the `tunnelbot`-user created on the JupyterHub (-> _~/.ssh/authorized_keys_)
 * Singularity (> v.3.7.0)
 * e2fsprogs with following option:
   * https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/commit/?id=217c0bdf17899c0f79b73f76feeadd6d55863180
 
 ### Clone Repository
 
-The best way is to copy the repository into a scratch directory of the user who is allowed to allocate resources.
+The best way is to copy this repository into a scratch directory of the user who is allowed to allocate resources.
 
 ```bash
 git clone https://github.com/pc2/JHub-HPC-Interface.git
@@ -119,7 +119,7 @@ Singularity recipe examples are in the directory SINGULARITY/.
 
 #### Build Singularity Container
 
-The following commands replace USER_ID in the recipes to the output of `id -u`, creates a new hidden file, and builds the singularity container with the new created file.
+The following commands replace USER_ID in the recipes to the output of `id -u`, create a new hidden file and build the singularity container with the new created file.
  
 ##### Compute
 
@@ -136,7 +136,7 @@ USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < SINGULARITY/Singularity_Tensorfl
 _singularity build help section_:
 > __-r, --remote__            build image remotely (does not require root)
 
-Please refer to the offical docs how to use the remote build featue: https://sylabs.io/docs/
+Please refer to the official docs on how to use the remote build feature: https://sylabs.io/docs/
 
 ### Configuration Wizard for Slurm
 
@@ -145,7 +145,7 @@ The script creates a temporary configuration file at the end, which can be copie
 
 #### Start the configuration wizard
 
-Just type following in your terminal:
+Just type the following in your terminal:
 ```bash
 ./jh_slurm_wizard
 ```
@@ -184,18 +184,18 @@ Just set `$enable_debug_mode` in the configuration file to true.
 
 ---
 
-## nbgrader Integration
+## NBGrader Integration
 
 ### Installation
 
-Installation insturctions:
+Installation instructions:
 https://nbgrader.readthedocs.io/en/latest/configuration/jupyterhub_config.html
 
 To create an exchange directory for every user, just create an empty directory in `$scratch_dir` and mount it into the container with `$singularity_bind_extra`.
 
 ### Changing the Student ID to the JupyterHub logged in user name
 
-Since the containers run as user jovyan, the value from the `$JUPYTERHUB_USER` variable is automatically used.
+Since the containers run as user `jovyan`, the value from the `$JUPYTERHUB_USER` variable is automatically used.
 
 See here for more information: 
 https://jupyter.readthedocs.io/en/latest/community/content-community.html#what-is-a-jovyan
@@ -218,22 +218,22 @@ To make _nbgrader_config.py_ available in the container, just append the file in
 
 ### Singularity Host Filesystems
 
-In case you are using Singularity, the host filesystems may be automatically mounted into the container when you start a Singularity Container.
+In case you are using Singularity, the host file system may be automatically mounted into the container when you start a Singularity Container.
 
 A possible cause is the option `mount hostfs` in _singularity.conf_
 
 See here: https://sylabs.io/guides/3.5/admin-guide/configfiles.html#singularity-conf
 
-### JupyterHub API (https or SSH tunnel)
+### JupyterHub API (HTTPS or SSH tunnel)
 
-#### https
+#### HTTPS
 
 See here for more information:
 https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html
 
 #### SSH Tunnel
 
-To make the JupyterHub API available on the compute node, a reverse SSH tunnel can be started from the compute node. For this purpose a "tunnelbot" user with an SSH key is created.
+To make the JupyterHub API available on the compute node, a reverse SSH tunnel can be started from the compute node. For this purpose a `tunnelbot` user with an SSH key is created.
 
 Set `$ssh_tunnel_api` to true.
 
