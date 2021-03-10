@@ -1,51 +1,14 @@
 # JupyterHub + High-Performance Computing
 
-*- High performance Jupyter Notebooks -*
+**High performance Jupyter Notebooks**
 
-The aim of this project is to connect JupyterHub to a high-performance computer (HPC). By automatically outsourcing the computations to the HPC system, even complex calculations are possible. While JupyterHub is deployed on a regular server, the notebooks themselves are spawned and run on the remote HPC system.
+The aim of this project is to connect JupyterHub to a high-performance computer (HPC). By automatically offloading the computations in a Jupyter notebook to the HPC system, even complex calculations are possible. While JupyterHub is deployed on a regular server, the notebooks themselves are spawned and run on the remote HPC system using a workload manager, such as Slurm.
 
 **Motivation**
 
 The technical core of this project is the transparent integration of digital worksheets (Jupyter notebooks), in which learning content and programs can be displayed, edited and executed on the students' own laptops, with current cloud and high-performance computing (HPC) technologies. This provides the conditions for innovative, digital teaching that encourages independent and interactive development of, for example, data science applications, without imposing the complexity of using a high-performance computer system on the students. Instead, particularly computationally and data-intensive calculations are automatically offloaded to a high-performance computer, enabling even sophisticated analyses to be performed that would otherwise not be feasible on students' laptops.
 
----
-
-## Table of Contents
-
-- [Features and what you can do with it](#features-and-what-you-can-do-with-it)
-- [Installation JupyterHub Server](#installation-jupyterhub-server)
-  - [JupyterHub and BatchSpawner](#jupyterhub-and-batchspawner)
-  - [SSH tunnel user](#ssh-tunnel-user)
-  - [Node mapping](#node-mapping)
-- [Installation HPC System](#installation-hpc-system)
-  - [Requirements](#requirements-1)
-  - [Clone Repository](#clone-repository)
-  - [Singularity Container](#singularity-container)
-    - [Build Singularity Container](#build-singularity-container)
-      - [Compute](#compute)
-      - [GPU (Tensorflow)](#gpu-tensorflow)
-  - [Configuration Wizard for Slurm](#configuration-wizard-for-slurm)
-    - [Start the configuration wizard](#start-the-configuration-wizard)
-- [Examples](#examples)
-- [Logging](#logging)
-  - [Debug mode](#debug-mode)
-- [Shibboleth Integration](#shibboleth-integration)
-- [nbgrader Integration](#nbgrader-integration)
-  - [Installation](#installation)
-  - [Changing the Student ID to the JupyterHub logged in user name](#changing-the-student-id-to-the-jupyterhub-logged-in-user-name)
-  - [Create nbgrader_config.py](#create-nbgrader_configpy)
-- [Using WebDAV](#using-webdav)
-- [Security Precautions](#security-precautions)
-  - [Singularity Host Filesystems](#singularity-host-filesystems)
-  - [JupyterHub API (https or SSH tunnel)](#jupyterhub-api-https-or-ssh-tunnel)
-    - [https](#https)
-    - [SSH Tunnel](#ssh-tunnel)
-  - [tunnelbot User](#tunnelbot-user)
-- [Troubleshooting](#troubleshooting)
-
----
-
-## Features and what you can do with it
+**Features and use cases**
 
 * Starting a jupyter notebook server on a remote HPC system in a pre-defined singularity container
 * Quick config setup when using the Slurm configuration wizard
@@ -54,7 +17,45 @@ The technical core of this project is the transparent integration of digital wor
 * Possibility to include files in the notebook directory using WebDAV
 * Suitable for HPC users who have their own JupyterHub instance running and want to use HPC resources
 
-## Installation JupyterHub Server
+---
+
+## Table of Contents
+
+- [JupyterHub + High-Performance Computing](#jupyterhub--high-performance-computing)
+  - [Table of Contents](#table-of-contents)
+  - [Installation of JupyterHub Server](#installation-of-jupyterhub-server)
+    - [JupyterHub and BatchSpawner](#jupyterhub-and-batchspawner)
+    - [SSH tunnel user](#ssh-tunnel-user)
+    - [Node mapping](#node-mapping)
+  - [Installation on HPC System](#installation-on-hpc-system)
+    - [Requirements](#requirements)
+    - [Clone Repository](#clone-repository)
+    - [Singularity Container](#singularity-container)
+      - [Build Singularity Container](#build-singularity-container)
+        - [Compute](#compute)
+        - [GPU (Tensorflow)](#gpu-tensorflow)
+    - [Configuration Wizard for Slurm](#configuration-wizard-for-slurm)
+      - [Start the configuration wizard](#start-the-configuration-wizard)
+  - [Examples](#examples)
+  - [Logging](#logging)
+    - [Debug mode](#debug-mode)
+  - [Shibboleth Integration](#shibboleth-integration)
+  - [nbgrader Integration](#nbgrader-integration)
+    - [Installation](#installation)
+    - [Changing the Student ID to the JupyterHub logged in user name](#changing-the-student-id-to-the-jupyterhub-logged-in-user-name)
+    - [Create nbgrader_config.py](#create-nbgrader_configpy)
+  - [Using WebDAV](#using-webdav)
+  - [Security Precautions](#security-precautions)
+    - [Singularity Host Filesystems](#singularity-host-filesystems)
+    - [JupyterHub API (https or SSH tunnel)](#jupyterhub-api-https-or-ssh-tunnel)
+      - [https](#https)
+      - [SSH Tunnel](#ssh-tunnel)
+    - [tunnelbot User](#tunnelbot-user)
+  - [Troubleshooting](#troubleshooting)
+
+---
+
+## Installation of JupyterHub Server
 
 This section describes the required installations and configurations on the JupyterHub server.
 
@@ -91,7 +92,9 @@ The actual node names depend on your HPC system of course.
 
 ---
 
-## Installation HPC System
+## Installation on HPC System
+
+This section describes the required installations and configurations of the HPC system to enable the interaction with the JuypterHub server.
 
 ### Requirements
 
