@@ -88,11 +88,13 @@ function run_compute_container () {
     else
         build_cmd="$build_cmd ${@:2}"
     fi
-   
+  
     eval $build_cmd
     
 	if [[ $? -eq 0 ]]; then
-		create_log_entry "INFO" "[Jupyter Notebook] Notebook server  for user $JUPYTERHUB_USER on host $(hostname) started!"
+		create_log_entry "INFO" "[Jupyter Notebook] Notebook server for user $JUPYTERHUB_USER on host $(hostname) started!"
+    else
+        create_log_entry "ERROR" "[Jupyter Notebook] Cannot start notebook server with cmd: $build_cmd"
 	fi
 }
 
@@ -100,7 +102,6 @@ function run_compute_container () {
 function run_gpu_container () {
 	
 	create_log_entry "INFO" "[Singularity] Starting Singularity with overlay for user $JUPYTERHUB_USER on gpu node..."
-	export NVIDIA_VISIBLE_DEVICES=0
     build_cmd=""
     if $use_singularity; then
         if $enable_debug_mode; then
@@ -129,6 +130,8 @@ function run_gpu_container () {
 
 	if [[ $? -eq 0 ]]; then
 		create_log_entry "INFO" "[Jupyter Notebook] Notebook Server for user $JUPYTERHUB_USER on host $(hostname) started!"
+    else
+        create_log_entry "ERROR" "[Jupyter Notebook] Cannot start notebook server with cmd: $build_cmd"
 	fi
 }
 
