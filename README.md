@@ -67,7 +67,8 @@ If you decide to do the installations yourself, please proceed as follows:
 
 - install [JupyterHub](https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html)
 - install [BatchSpawner](https://github.com/jupyterhub/batchspawner)
-- copy the JupyterHub configuration (`/jupyterhub-deployment/config_files/jupyterhub_config.py`) to `/opt/jupyterhub/etc/jupyterhub/`
+- install [WrapSpawner](https://github.com/jupyterhub/wrapspawner) (make sure to install it in the right environment: `/opt/jupyterhub/bin/pip3 install git+https://github.com/jupyterhub/wrapspawner`)
+- copy the JupyterHub configuration file `/jupyterhub-deployment/config_files/jupyterhub_config.py` to `/opt/jupyterhub/etc/jupyterhub/` (you will most likely have to edit this file afterwards to make it fit your needs)
 - restart the JupyterHub service
 
 ### SSH tunnel user
