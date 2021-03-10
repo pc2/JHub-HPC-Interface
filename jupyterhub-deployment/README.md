@@ -4,19 +4,25 @@ The following installations and configurations are performed automatically:
 
 - installation of [JupyterHub](https://jupyterhub.readthedocs.io/en/stable/installation-guide-hard.html)
 - installation of [BatchSpawner](https://github.com/jupyterhub/batchspawner)
+- installation of [WrapSpawner](https://github.com/jupyterhub/wrapspawner)
 - installation of required tools (Git etc.)
-- copying the configuration files
+- copying the configuration file `jupyterhub_config.py` (you will most likely have to edit this file afterwards to make it fit your needs!)
 - JupyterHub restart
+
+(Testet on Ubuntu 18.04)
 
 ## Requirements
 
-- Ansible installed on the control node (see below).
+- clone this repo to your local machine
+- Ansible installed on your **local** machine (see below)
 - user `ansiblebot` with root privileges exists on the JupyterHub server
-- passwordless SSH access as `ansiblebot` to the JupyterHub server granted
+- **passwordless** SSH access as `ansiblebot` possible from your local machine to the JupyterHub server
+
+Instead of `ansiblebot` you can use any other user that meets the above requirements. This user must be registered in `jupyterhub-deployment.yml`.
 
 ## Ansible installation
 
-The [installation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) of Ansible on the control node is done as follows:
+The [installation](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html) of Ansible on your **local** machine is done as follows:
 
 ```bash
 sudo apt update
@@ -27,19 +33,21 @@ sudo apt install ansible
 
 No Ansible installation is required on the JupyterHub server itself.
 
-## Carrying out the deployment
+## Running the playbook
 
-First, the JupyterHub server must be added to `/etc/ansible/hosts` so that it can be reached by Ansible. The IP and, if necessary, a non-standard SSH port are specified there:
+First, the JupyterHub server must be added to `/etc/ansible/hosts` on your local machine so that it can be reached by Ansible. The IP and, if necessary, a non-standard SSH port must be specified there:
 
 ```
 # JupyterHub Server:
 [jupyterhub_server]
-1.2.3.4                   # IP
-#1.2.3.4 ansible_port=123 # alternatively with different SSH port
+1.2.3.4                   # JupyterHub server IP
+#1.2.3.4 ansible_port=123 # alternatively with non-standard SSH port
 ```
 
-Then the Ansible playbook is run:
+Then the Ansible playbook is run from your local machine:
 
 ```bash
 ansible-playbook --ask-become-pass ./jupyterhub-deployment.yml
 ```
+
+A prompt will ask for a `BECOME password`. Enter `ansiblebot`s password there.
