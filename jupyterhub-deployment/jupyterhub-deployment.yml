@@ -25,6 +25,11 @@
   - name: Installing Batchspawner
     include: install_batchspawner.yaml
 
+##### Install Wrapspawner #####
+
+  - name: Installing Wrapspawner
+    include: install_wrapspawner.yaml
+
 ##### Configuration #####
 
   - name: Copy JupyterHub config

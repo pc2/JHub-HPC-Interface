@@ -1,0 +1,8 @@
+# This Ansible tasklist installs Wrapspawner (https://github.com/jupyterhub/wrapspawner)
+
+  - name: Installing Wrapspawner
+    shell: /opt/jupyterhub/bin/pip3 install git+https://github.com/jupyterhub/wrapspawner
+    register: result
+  - debug:
+      var: result.stdout_lines
+    when: result.stdout_lines is defined
