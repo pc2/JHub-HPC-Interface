@@ -12,6 +12,7 @@ The technical core of this project is the transparent integration of digital wor
 
 ## Table of Contents
 
+- [Features and what you can do with it](#features-and-what-you-can-do-with-it)
 - [Installation JupyterHub Server](#installation-jupyterhub-server)
   - [JupyterHub and BatchSpawner](#jupyterhub-and-batchspawner)
   - [SSH tunnel user](#ssh-tunnel-user)
@@ -44,10 +45,14 @@ The technical core of this project is the transparent integration of digital wor
 
 ---
 
-## TODO
+## Features and what you can do with it
 
-* User Accounting Information on HPC-Side
-* JupyterHub: Shibboleth Integration
+* Starting a jupyter notebook server on a remote HPC system in a pre-defined singularity container
+* Quick config setup when using the Slurm configuration wizard
+* Automatically create a singularity overlay so that user changes are persistent
+* Great for managing courses with external participants
+* Possibility to include files in the notebook directory using WebDAV
+* Suitable for HPC users who have their own JupyterHub instance running and want to use HPC resources
 
 ## Installation JupyterHub Server
 
@@ -91,11 +96,9 @@ The actual node names depend on your HPC system of course.
 ### Requirements
 
 * You need a user who is allowed to allocate resources on the HPC system
+  * With a SSH key pair. The public part must be deposited on the JupyterHub serer (tunnelbot user)
   * The public key part of the tunnelbot-user created on the JupyterHub (-> _~/.ssh/authorized_keys_)
-
-#### Requirements (If you want to use Singularity)
-
-* __Singularity (> v.3.7.0)__ (If you want to use Singularity)
+* Singularity (> v.3.7.0)
 * e2fsprogs with following option:
   * https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/commit/?id=217c0bdf17899c0f79b73f76feeadd6d55863180
 
@@ -110,8 +113,6 @@ git clone https://github.com/pc2/JHub-HPC-Interface.git
 ### Singularity Container
 
 Singularity recipe examples are in the directory SINGULARITY/.
-
-> INFO: If you do not want to use Singularity, just set `$use_singularity` in _jh_config_ to `false`.
 
 #### Build Singularity Container
 
