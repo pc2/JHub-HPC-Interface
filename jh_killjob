@@ -8,12 +8,10 @@ source $SDIR/jh_config
 # get information from given job $1
 JOBID=$1
 job_owner=$(eval $cmd_job_owner)
-job_batch=$(eval $cmd_job_batchfile | eval $cmd_job_batchfile_filter)
 
 function cleanup () {
 
     [[ -d $webdav_mount_dir ]] && rmdir $webdav_mount_dir && create_log_entry "DEBUG" "[WEBDAV] Deleted WebDAV-Directory $webdav_mount_dir"
-	rm $job_batch
 
 	create_log_entry "DEBUG" "[Kill] Successfully cleaned up the home directory for user $job_owner"
 }

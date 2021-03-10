@@ -70,26 +70,8 @@ function additional_config () {
 			echo "####################################"
 			break
 	done
-
-		while (true); do
-			echo "Do you want to use Singularity to spawn the jupyter notebooks?"
-			read -p "Use singularity (Y/n): " usesingu
-			if [[ $usesingu == "Y" ]] || [[ $usesingu == "y" ]]; then
-				echo "Okelidokeli. Using singularity to spawn jupyter notebooks"
-				usesingu=true
-			elif [[ $usesingu == "N" ]] || [[ $usesingu == "n" ]]; then
-				echo "Okelidokeli. WILL NOT using singularity."
-				usesingu=false
-			else
-				echo "Okelidokeli. Using singularity to spawn jupyter notebooks"
-				usesingu=true
-			fi
-
-			echo "Setting use_singularity to $usesingu"
-			USE_SINGULARITY=$usesingu
-			echo "####################################"
-
-			if $usesingu && $createhomes; then
+			USE_SINGULARITY=true
+			if $createhomes; then
 				while (true); do
 					echo "An overlay will be created for all users. This way changes remain persistent."
 					read -p "Overlay size (MB) [2048]: " overlays
@@ -129,7 +111,6 @@ function additional_config () {
 			else
 				echo "WARNING: At this point I would ask you the size of the overlay placed in the user home directory. But you decided to not create home directories. All user changes are temporary."
 			fi
-			if $usesingu; then
 				while (true); do
 					echo "We need to know which container should be started when the job starts on a regular compute node"
 					def_compute_s="$PROJECT_GROUP/SINGULARITY/compute_jupyter.sif"
@@ -200,9 +181,7 @@ function additional_config () {
 					echo "#####################################"
 					break
 				done
-			fi
 			break
-		done
 		while (true); do
 			echo "Do you want to enable logging?"
 			read -p "Enable logging (Y,n): " logging
