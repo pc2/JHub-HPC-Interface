@@ -29,28 +29,24 @@ The technical core of this project is the transparent integration of digital wor
     - [Node mapping](#node-mapping)
   - [Installation on HPC System](#installation-on-hpc-system)
     - [Requirements](#requirements)
-    - [Clone Repository](#clone-repository)
+    - [Install using pip](#install-using-pip)
     - [Singularity Container](#singularity-container)
       - [Build Singularity Container](#build-singularity-container)
         - [Compute](#compute)
         - [GPU (Tensorflow)](#gpu-tensorflow)
-    - [Configuration Wizard for Slurm](#configuration-wizard-for-slurm)
-      - [Start the configuration wizard](#start-the-configuration-wizard)
+    - [The configuration file](#the-configuration-file)
   - [Examples](#examples)
-  - [Logging](#logging)
     - [Debug mode](#debug-mode)
   - [Shibboleth Integration](#shibboleth-integration)
-  - [nbgrader Integration](#nbgrader-integration)
+  - [NBGrader Integration](#nbgrader-integration)
     - [Installation](#installation)
     - [Changing the Student ID to the JupyterHub logged in user name](#changing-the-student-id-to-the-jupyterhub-logged-in-user-name)
     - [Create nbgrader_config.py](#create-nbgrader_configpy)
-  - [Using WebDAV](#using-webdav)
   - [Security Precautions](#security-precautions)
     - [Singularity Host Filesystems](#singularity-host-filesystems)
-    - [JupyterHub API (https or SSH tunnel)](#jupyterhub-api-https-or-ssh-tunnel)
-      - [https](#https)
-      - [SSH Tunnel](#ssh-tunnel)
-    - [tunnelbot User](#tunnelbot-user)
+    - [JupyterHub API (HTTPS)](#jupyterhub-api-https)
+      - [HTTPS](#https)
+    - [tunnelbot user](#tunnelbot-user)
   - [Troubleshooting](#troubleshooting)
 
 ---
@@ -103,20 +99,24 @@ This section describes the required installations and configurations of the HPC 
   * With a SSH key pair. The public part must be deposited on the JupyterHub serer (`tunnelbot` user)
   * The public key part of the `tunnelbot`-user created on the JupyterHub (-> _~/.ssh/authorized_keys_)
 * Singularity (> v.3.7.0)
-* e2fsprogs with following option:
+* mkfs/e2fsprogs with following option:
   * https://git.kernel.org/pub/scm/fs/ext2/e2fsprogs.git/commit/?id=217c0bdf17899c0f79b73f76feeadd6d55863180
 
-### Clone Repository
+### Install using pip
 
-The best way is to copy this repository into a scratch directory of the user who is allowed to allocate resources.
+You can download and install the required files with pip.
+
+You may want to build a small Python environment, or install the tools with `--user`.
 
 ```bash
-git clone https://github.com/pc2/JHub-HPC-Interface.git
+python3 -m pip install --user jh_hpc_interface
 ```
 
 ### Singularity Container
 
-Singularity recipe examples are in the directory SINGULARITY/.
+Singularity recipe examples are in the directory singularity/.
+
+If you do not want to use singularity, then change the value of `use_singularity` in jh_config.ini to false.
 
 #### Build Singularity Container
 
@@ -125,13 +125,13 @@ The following commands replace USER_ID in the recipes to the output of `id -u`, 
 ##### Compute
 
 ```bash
-USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < SINGULARITY/Singularity > SINGULARITY/.recipefile_compute && singularity build --remote SINGULARITY/compute_jupyter.sif SINGULARITY/.recipefile_compute
+USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < singularity/Singularity > singularity/.recipefile_compute && singularity build --remote singularity/compute_jupyter.sif singularity/.recipefile_compute
 ```
 
 ##### GPU (Tensorflow)
 
 ```bash
-USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < SINGULARITY/Singularity_Tensorflow > SINGULARITY/.recipefile_gpu && singularity build --remote SINGULARITY/gpu_jupyter.sif SINGULARITY/.recipefile_gpu
+USER_ID=$(id -u) && sed "s/USER_ID/$USER_ID/" < singularity/Singularity_Tensorflow > singularity/.recipefile_gpu && singularity build --remote singularity/gpu_jupyter.sif singularity/.recipefile_gpu
 ```
 
 _singularity build help section_:
@@ -139,36 +139,25 @@ _singularity build help section_:
 
 Please refer to the official docs on how to use the remote build feature: https://sylabs.io/docs/
 
-### Configuration Wizard for Slurm
+### The configuration file 
 
-The configuration wizard is an interactive script to configure the HPC environment with JupyterHub.
-The script creates a temporary configuration file at the end, which can be copied with a simple `cp`.
+In the directory __bin/__ is a script, which is deposited after the installation on the system.
 
-#### Start the configuration wizard
+With the following call you can display the location of the configuration file:
 
-Just type the following in your terminal:
 ```bash
-./jh_slurm_wizard
+$ jh_wrapper getconfig
 ```
 
-If you are using another workload manager, you can configure _jh_config_ manually.
+To learn more about the configuration file, see [docs/jh_config.ini.md](docs/jh_config.ini.md)
 
 ---
 
 ## Examples
 
-You will find examples for the configuration files jh_config and jupyterhub_config.py in the directory _examples/_.
+You will find examples for the configuration files __jh_config.ini__ and __jupyterhub_config.py__ in the directory _examples/_.
 
 ---
-
-## Logging
-
-![Logging Example](imgs/logging_example.png)
-
-The function that stores log information is defined in the configuration file `jh_config`.
-In each wrapper script, the `create_log_entry` function stores log files in the `$log_dir`.
-
-The `jh_show_log` script can be used to retrieve current logs.
 
 ### Debug mode
 
@@ -209,12 +198,6 @@ To make _nbgrader_config.py_ available in the container, just append the file in
 
 ---
 
-## Using WebDAV
-
-> Example: https://github.com/jmesmon/wdfs
-
----
-
 ## Security Precautions
 
 ### Singularity Host Filesystems
@@ -225,31 +208,14 @@ A possible cause is the option `mount hostfs` in _singularity.conf_
 
 See here: https://sylabs.io/guides/3.5/admin-guide/configfiles.html#singularity-conf
 
-### JupyterHub API (HTTPS or SSH tunnel)
+### JupyterHub API (HTTPS)
 
 #### HTTPS
 
 See here for more information:
 https://jupyterhub.readthedocs.io/en/stable/reference/websecurity.html
 
-#### SSH Tunnel
-
-To make the JupyterHub API available on the compute node, a reverse SSH tunnel can be started from the compute node. For this purpose a `tunnelbot` user with an SSH key is created.
-
-Set `$ssh_tunnel_api` to true.
-
-The variables `$ssh_jh_ip`, `$ssh_tunnel_user` and `$ssh_priv_key` are set in the configuration file _jh_config_.
-
-After _jh_starttunnel_ and _jh_batchspawner_singleuser_replace_ have been mounted into the container, the tunnel is built and the API then listens on _**127.0.0.1:8083**_
-
-**Why 8083 and not default 8081?**
-
-Most HPC systems use Bright as their cluster management system.
-Bright uses port 8081.
-
-The port number can be changed with option `ssh_tunnel_api_port` in _jh_config_
-
-### tunnelbot User
+### tunnelbot user
 
 You can increase the security by deactivating shell access for this user.
 
@@ -266,7 +232,3 @@ usermod -s /bin/false tunnelbot
 When problems occur with the JupyterHub, some information can be obtained from the logs when debug mode is enabled:
 
 https://github.com/jupyterhub/jupyterhub/wiki/Debug-Jupyterhub
-
-If you encounter problems with the wrapper scripts, you can get help at _docs/troubleshooting.md_:
-
-[Troubleshooting](docs/troubleshooting.md)

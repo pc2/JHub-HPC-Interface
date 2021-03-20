@@ -3,25 +3,15 @@ c = get_config();
 
 #### SPAWNER CONFIGURATION #### 
 
-public_fe_connect='jhhpcclient@12.13.14.15'; # HPCUser@HPCIP
+public_fe_connect='mawi@192.168.56.102'; # HPCUser@HPCIP
 # This directory should contain all wrapper scripts
-hpc_dir="/scratch/hpc-jh/"
+hpc_dir="/scratch/hpc-group/"
 # RegEx: compute nodes of the HPC system
-state_exechost_re = '(^node[0-9][0-9]-[0-9][0-9][0-9])'
+state_exechost_re = r'\s+((?:[\w_-]+\.?)+)$';
 # Pending status of a job
-state_pending_re = r'PENDING|CONFIGURING'
+state_pending_re = r'^(?:PENDING|CONFIGURING)'
 # Running status of a job
-state_running_re = r'RUNNING|COMPLETING'
-
-#### SPAWNER CONFIGURATION ####
-
-### SSL Config
-
-c.JupyterHub.port = 443
-c.JupyterHub.ssl_key = '/opt/jupyterhub/etc/jupyterhub/ssl/jupyterhub_key.pem'
-c.JupyterHub.ssl_cert = '/opt/jupyterhub/etc/jupyterhub/ssl/jupyterhub_certificate.pem'
-
-c.ConfigurableHTTPProxy.command = ['configurable-http-proxy', '--redirect-port', '80']
+state_running_re = r'^(?:RUNNING|COMPLETING)'
 
 import batchspawner
 from traitlets import (
@@ -32,41 +22,29 @@ from wrapspawner import ProfilesSpawner
 
 class RemoteHPCSpawner(BatchSpawnerRegexStates):
 
-	env_var = "JUPYTERHUB_API_TOKEN,JPY_API_TOKEN,JUPYTERHUB_CLIENT_ID,JUPYTERHUB_OAUTH_CALLBACK_URL,JUPYTERHUB_USER,JUPYTERHUB_API_URL,JUPYTERHUB_BASE_URL,JUPYTERHUB_SERVICE_PREFIX"                                       
-	ssh_cmd = " ".join(["ssh", "-i", "/home/tunnelbot/.ssh/id_rsa", public_fe_connect, "env"] + [val+"=$"+val for val in env_var.split(",")]) + " " + hpc_dir
-	batch_submit_cmd = ssh_cmd + 'jh_startjob'
-	batch_query_cmd = ssh_cmd + 'jh_gethoststate {job_id}'
-	batch_cancel_cmd = ssh_cmd + 'jh_killjob {job_id}'
-	state_exechost_re = state_exechost_re
-	state_pending_re = state_pending_re
-	state_running_re = state_running_re
+    env_var = "JUPYTERHUB_API_TOKEN,JPY_API_TOKEN,JUPYTERHUB_CLIENT_ID,JUPYTERHUB_OAUTH_CALLBACK_URL,JUPYTERHUB_USER,JUPYTERHUB_API_URL,JUPYTERHUB_BASE_URL,JUPYTERHUB_SERVICE_PREFIX"                                       
+    ssh_cmd = " ".join(["ssh", "-o", "StrictHostKeyChecking=no", "-i", "/home/tunnelbot/.ssh/id_rsa", public_fe_connect, "env"] + [val+"=$"+val for val in env_var.split(",")])
+    batch_submit_cmd = ssh_cmd + ' jh_wrapper'
+    batch_query_cmd = ssh_cmd + " jh_wrapper get --jobid {job_id}"
+    batch_cancel_cmd = ssh_cmd + ' jh_wrapper stop --jobid {job_id}'
+    state_exechost_re = state_exechost_re
+    state_pending_re = state_pending_re
+    state_running_re = state_running_re
 
-	req_webdavurl = Unicode('',
-	help="WebDAV URL. Mount WebDAV Share with FUSE as user notebook directory"
-	).tag(config=True)
-	req_davusername = Unicode('',
-	help="Username for req_webdavurl"
-	).tag(config=True)
-	req_davtoken = Unicode('',
-	help="Password/Token for req_webdavurl"
-	).tag(config=True)
+    req_webdavurl = Unicode('',
+    help="WebDAV URL. Mount WebDAV Share with FUSE as user notebook directory"
+    ).tag(config=True)
+    req_davusername = Unicode('',
+    help="Username for req_webdavurl"
+    ).tag(config=True)
+    req_davtoken = Unicode('',
+    help="Password/Token for req_webdavurl"
+    ).tag(config=True)
 
-	def parse_job_id(self, output):
-		# make sure jobid is really an integer
-		try:
-			int(output)
-		except Exception as e:
-			self.log.error("CustomHPCSpawner unable to extract job ID from output: " + output)
-			raise e
-		return output
-
-class RemoteHPCSpawner_Slurm (RemoteHPCSpawner):
-	
-	batch_script = """#!/bin/bash
+    batch_script = """#!/bin/bash
 #SBATCH --job-name={{username}}
 #SBATCH --export={{keepvars}}
 #SBATCH --get-user-env=L
-#SBATCH --output=/scratch/test-jupyterhub/JOBLOGT
 {% if partition  %}#SBATCH --partition={{partition}}
 {% endif %}{% if runtime    %}#SBATCH --time={{runtime}}
 {% endif %}{% if memory     %}#SBATCH --mem={{memory}}
@@ -74,29 +52,27 @@ class RemoteHPCSpawner_Slurm (RemoteHPCSpawner):
 {% endif %}{% if reservation%}#SBATCH --reservation={{reservation}}
 {% endif %}{% if options    %}#SBATCH {{options}}{% endif %}
 
-# $hpcuser_dir should contain all wrapper scripts (jh_startjob, jh_killjob, ...)
-hpcuser_dir=/scratch/hpc-lco-jupyter/
-source $hpcuser_dir/jh_config
+#ssh -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no -fN -L 8081:127.0.0.1:8081 root@192.168.56.103
 
-{% if webdavurl %}
-    export WDURL={{webdavurl}}
-    export WDUN={{davusername}}
-    export WDT={{davtoken}}
-{% endif %}
+# Maybe you want to load your python environment?
+# module load python3
 
-{% if ngpus %}
-JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment gpu {{cmd}}
-{% else %}
-JUPYTERHUB_USER={{username}} $hpcuser_dir/jh_start_notebook_environment compute {{cmd}}
-{% endif %}
+python3 -c 'import jh_hpc_interface; jh_hpc_interface.JupyterEnvironment("compute {{cmd}}")'
 	"""
+
+    def parse_job_id(self, output):
+        # make sure jobid is really an integer
+        try:
+            int(output)
+        except Exception as e:
+            self.log.error("CustomHPCSpawner unable to extract job ID from output: " + output)
+            raise e
+        return output
 
 class CustomProfilesSpawner(ProfilesSpawner):
 	# PROFILESSPAWNER PROFILES
 	profiles = [
-    ("HPC Cluster - 1 core, 2G RAM, 2 hours running time", 'hpc_t1', RemoteHPCSpawner_Slurm, dict(req_nprocs='1', req_runtime='"2:00:00', req_memory='2g')),
-    ("HPC Cluster - 2 core, 4G RAM, 4 hours running time", 'hpc_t2', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='4:00:00', req_memory='4g')),
-    ("HPC Cluster GPU - 1x GTX1080Ti, 2 core, 8G RAM, 60G vmem, 5 hours running time", 'hpc_gpu', RemoteHPCSpawner_Slurm, dict(req_nprocs='2', req_runtime='5:00:00', req_memory='8g', req_ngpus='gpus=1')),
+    ("HPC System - 1 core, 1 hour running time", 'hpc_t1', RemoteHPCSpawner, dict(req_nprocs='1', req_runtime='1:00:00')),
 	]
 
 	form_template = """
@@ -144,9 +120,12 @@ class CustomProfilesSpawner(ProfilesSpawner):
 		#self.child_config["req_davtoken"] = self.user_options.get('req_davtoken')
 		super().construct_child()
 
-c.JupyterHub.spawner_class = CustomProfilesSpawner;
+c.JupyterHub.spawner_class = RemoteHPCSpawner;
 
 c.RemoteHPCSpawner.exec_prefix = '';
+c.Spawner.args = ['--debug'];
+c.Spawner.http_timeout = 120
+c.Spawner.start_timeout = 180; # wait 180 seconds
 
 #------------------------------------------------------------------------------
 # Application(SingletonConfigurable) configuration

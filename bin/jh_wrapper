@@ -1,0 +1,102 @@
+#!/usr/bin/env python3
+
+import argparse;
+import sys;
+try:
+    import jh_hpc_interface;
+except ImportError:
+    sys.exit('ImportError: Did you installed the jh_hpc_interface package? Try installing it with: python3 -m pip install jh_hpc_interface');
+
+def config ():
+    import os;
+
+    lib_dir = os.path.dirname(jh_hpc_interface.jh_interface.__file__) + '/';
+    if os.path.isfile(lib_dir + 'config/jh_config.ini'):
+        print('Config path: ' +str(lib_dir) + 'config/jh_config.ini');
+    else:
+        sys.exit(f'Could not find config file {lib_dir}config/jh_config.ini???');
+
+def start (stdin):
+    # create object
+    jupyter_job = jh_hpc_interface.jh_interface.manageInstance(stdin); 
+    jupyter_job.start();
+
+def get (jobid):
+    # get object information
+    import subprocess;
+    import configparser;
+    import os;
+    import re;
+
+    lib_dir = os.path.dirname(jh_hpc_interface.jh_interface.__file__) + '/';
+    config = configparser.ConfigParser();
+    if os.path.isfile(lib_dir + 'config/jh_config.ini'):
+        config.read(lib_dir + 'config/jh_config.ini');
+    else:
+        sys.exit(f'Could not find config file {lib_dir}config/jh_config.ini');
+
+    get_execnode_cmd = str(config['workload_manager']['cmd_job_get_exec_node']);
+    get_execnode_cmd = get_execnode_cmd.replace('$JOBID', str(jobid));
+    execnode_regex = str(config['workload_manager']['execnode_regex']);
+
+    get_jobstate_cmd = str(config['workload_manager']['cmd_job_state']);
+    get_jobstate_cmd = get_jobstate_cmd.replace('$JOBID', str(jobid));
+
+    job_state = subprocess.check_output(get_jobstate_cmd, shell=True);
+    get_node  = subprocess.check_output(get_execnode_cmd, shell=True);
+
+    job_state = job_state.decode('utf-8');
+    get_node = get_node.decode('utf-8');
+
+    job_state = job_state.rstrip();
+    get_node = get_node.rstrip();
+    get_node = ' '.join(re.findall(str(execnode_regex), get_node));
+
+    print(f'{job_state} {get_node}');
+
+def stop (jobid):
+    # stop started job
+    import subprocess;
+    import configparser;
+    import os;
+
+    lib_dir = os.path.dirname(jh_hpc_interface.jh_interface.__file__) + '/';
+    config = configparser.ConfigParser();
+    if os.path.isfile(lib_dir + 'config/jh_config.ini'):
+        config.read(lib_dir + 'config/jh_config.ini');
+    else:
+        sys.exit(f'Could not find config file {lib_dir}config/jh_config.ini');
+
+    get_stop_cmd = str(config['workload_manager']['cmd_kill_job']);
+    get_stop_cmd = get_stop_cmd.replace('$JOBID', str(jobid));
+
+    killjob_cmd = get_stop_cmd.rstrip();
+    killjob = subprocess.check_output(killjob_cmd, shell=True);
+
+def main ():
+    
+    parser = argparse.ArgumentParser();
+    subparser = parser.add_subparsers(dest='operation');
+
+    stop_operation = subparser.add_parser('getconfig', help='Output the path of the configuration file');
+    
+    get_operation = subparser.add_parser('get');
+    get_operation.add_argument('--jobid', required=True, type=int, help='Outputs the execution host and the job state');
+
+    stop_operation = subparser.add_parser('stop');
+    stop_operation.add_argument('--jobid', required=True, type=int, help='Kill a job using the command specified in the configuration file jh_config.ini');
+
+    args = parser.parse_args();
+
+    if args.operation == 'getconfig':
+        config();
+    elif args.operation == 'get':
+        get(args.jobid);
+    elif args.operation == 'stop':
+        stop(args.jobid);
+    else:
+        # default is: start();
+        start(str(sys.stdin.read()).rstrip());
+
+if __name__ == '__main__':
+    main();
