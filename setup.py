@@ -8,9 +8,10 @@ with open('README.md', 'r', encoding='utf-8') as fh:
 site.ENABLE_USER_SITE = '--user' in sys.argv[1:];
 
 setuptools.setup(
-name="jh-hpc-interface",
+name="jh_hpc_interface",
 version="1.0",
 author="Paderborn Center for Parallel Computing",
+include_package_data=True,
 packages=['jh_hpc_interface'],
 scripts=['bin/jh_wrapper'],
 description="JupyterHub + High-Performace Computing",
