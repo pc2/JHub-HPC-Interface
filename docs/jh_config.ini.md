@@ -4,9 +4,10 @@
 | ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | `jupyterhub_ip` | This IP will be used to start a SSH tunnel. It should be a reachable IP address of course |
 | `jupyterhub_api_url` | The JupyterHub API URL - If you want to start a SSH tunnel, leave a local address |
+| `log_file` | The file where the log information will be written. |
+| `log_level` | Set the log level. If set to DEBUG the command `$cmd_run_job_debug` will be used to start a notebook server |
 | `maintenance` | If set to True, no notebook server will be start, except for user `$maintenance_user` |
 | `maintenance_user` | See above :-) |
-| `enable_debug_mode` | If set to true, the command `$cmd_run_job_debug` will be used to start a job |
 | `cmd_run_job` | How to run a job with your workload manager |
 | `cmd_run_job_debug` | How to run a job if debug mode is enabled |
 | `cmd_kill_job` | How to kill a job  with your workload manager. Attention. '$JOBID' will be automatically replaced! |

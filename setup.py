@@ -9,11 +9,11 @@ site.ENABLE_USER_SITE = '--user' in sys.argv[1:];
 
 setuptools.setup(
 name="jh_hpc_interface",
-version="1.0",
+version="1.1",
 author="Paderborn Center for Parallel Computing",
 include_package_data=True,
 packages=['jh_hpc_interface'],
-scripts=['bin/jh_wrapper'],
+scripts=['bin/jh_wrapper', 'bin/jh_slurm_wizard'],
 description="JupyterHub + High-Performace Computing",
 long_description=long_description,
 long_description_content_type="text/markdown",

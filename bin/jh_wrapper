@@ -73,6 +73,34 @@ def stop (jobid):
     killjob_cmd = get_stop_cmd.rstrip();
     killjob = subprocess.check_output(killjob_cmd, shell=True);
 
+def showlog (live=False):
+
+    import configparser;
+    import os;
+    import subprocess;
+
+    lib_dir = os.path.dirname(jh_hpc_interface.jh_interface.__file__) + '/';
+    config = configparser.ConfigParser(interpolation=configparser.ExtendedInterpolation());
+    if os.path.isfile(lib_dir + 'config/jh_config.ini'):
+        config.read(lib_dir + 'config/jh_config.ini');
+    else:
+        sys.exit(f'Could not find config file {lib_dir}config/jh_config.ini');
+
+    logfile = config['general']['log_file'];
+
+    if not os.path.isfile(logfile):
+        configf = lib_dir + 'config/jh_config.ini'
+        sys.exit(f'Error: Log file {logfile} specified in {configf} does not exists!')
+
+    if live:
+        lf = subprocess.Popen(['tail','-f',str(logfile)], stdout=subprocess.PIPE);
+        while True:
+            line = lf.stdout.readline();
+            sys.stdout.write(str(line));
+    else:
+        lf = subprocess.check_output(f'tail -n 10 {logfile}', shell=True).rstrip().decode('utf-8');
+        print(lf);
+
 def main ():
     
     parser = argparse.ArgumentParser();
@@ -80,6 +108,9 @@ def main ():
 
     stop_operation = subparser.add_parser('getconfig', help='Output the path of the configuration file');
     
+    showlog_operation = subparser.add_parser('showlog', help='Show last log');
+    showlog_operation.add_argument('--live', action='store_true', help='Output last logs in live mode');
+
     get_operation = subparser.add_parser('get');
     get_operation.add_argument('--jobid', required=True, type=int, help='Outputs the execution host and the job state');
 
@@ -90,6 +121,11 @@ def main ():
 
     if args.operation == 'getconfig':
         config();
+    elif args.operation == 'showlog':
+        if args.live:
+            showlog(live=True);
+        else:
+            showlog();
     elif args.operation == 'get':
         get(args.jobid);
     elif args.operation == 'stop':

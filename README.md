@@ -164,7 +164,7 @@ You will find examples for the configuration files __jh_config.ini__ and __jupyt
 By default the logs contain only information such as warnings or error messages.
 It is also possible to switch on the debug mode, which writes extended information into the log files.
 
-Just set `$enable_debug_mode` in the configuration file to true.
+Just set `log_level` in the configuration file to 'DEBUG'.
 
 ---
 

@@ -1,0 +1,299 @@
+#!/usr/bin/env python3
+
+import configparser;
+import sys;
+import os;
+import tempfile;
+import curses;
+try:
+    import jh_hpc_interface;
+except ImportError:
+    print('LOL ... Do you installed the jh-hpc-interface package?');
+
+config = configparser.ConfigParser();
+
+def create_ini_file ():
+    newfile, filename = tempfile.mkstemp();
+    print('\nCreated temporary file: ' +str(filename));
+    
+    with open(str(filename), 'w') as tmpfile:
+        config.write(tmpfile);
+    
+    config_file = os.path.dirname(jh_hpc_interface.jh_interface.__file__) + '/config/jh_config.ini';
+
+    print('########################################################');
+    print('I created a config file for you. You can copy it with a simple cp:')
+    print(f'cp {filename} {config_file}');
+    print('########################################################');
+    sys.exit(0);
+
+def get_values ():
+
+    ######
+
+    while True:
+        print('To create log information, we need a file where to store it. If it does not exists I will create it.');
+        log_file = input('Log file: ');
+
+        print('Log file: ' + str(log_file));
+
+    while True:
+        print("What is the IP address of your JupyterHub server?");
+        jupyterhub_ip = input('IP address: ');
+    
+        import socket;
+        try:
+            socket.inet_aton(jupyterhub_ip);
+            print('JupyterHub IP address: ' + str(jupyterhub_ip));
+            break;
+        except socket.error:
+            print('Your entered value is not a valid IP address!');
+            continue;
+
+    print("Now I want to know the JupyterHub API URL. If you want to start a SSH tunnel for the API, set a local address.");
+    jupyterhub_api_url = input('API URL: ');
+    print('Using JupyterHub API URL: ' + str(jupyterhub_api_url));
+    print('');
+
+    ######
+
+    print('What is the name of your compute nodes using RegEx? (e.g. node[0-9]-[0-9])');
+    execnode_regex = input('RegEx NodeNames: ');
+    print('Using RegEx: ' + str(execnode_regex));
+    print('');
+
+    ######
+
+    while True:
+        print('Do you want to tunnel the JupyterHub API to the compute node? (Yes, if API URL is a loopback address)');
+        print('If your JupyterHub API listens on a public IP address (with https hopefully) then you do not need a SSH tunnel.');
+        ssh_tunnel_api = input('Create SSH tunnel for JH API [Y/n]: ');
+        if ssh_tunnel_api == 'n' or ssh_tunnel_api == 'N':
+            ssh_tunnel_api = 'False';
+            ssh_tunnel_src_api_port = '';
+            ssh_tunnel_dst_api_port = '';
+            ssh_tunnel_user = '';
+            ssh_keypath = '';
+            print('OK. Do not start a SSH tunnel for the JupyterHub API.');
+            break;
+        elif ssh_tunnel_api == '':
+            ssh_tunnel_api = 'True';
+            print('OK. Starting a SSH tunnel for the JupyterHub API.');
+            break;
+        else:
+            print('Invalid input!');
+            continue;
+    print('');
+
+    if ssh_tunnel_api == 'True':
+
+        while True:
+            print('On which port is the JupyterHub API listening? (Default is 8081)');
+            ssh_tunnel_src_api_port = input('Port: ');
+            if not ssh_tunnel_src_api_port.isdigit() or int(ssh_tunnel_src_api_port) > 65535:
+                print('Invalid input! Type in a valid port number.');
+                continue;
+            print('JupyterHub API is listening on: ' + str(ssh_tunnel_src_api_port));
+            break;
+
+        while True:
+            print('Now I want to know on which port I should map the JupyterHub API? (127.0.0.1:????)');
+            print('Your API URL is following: "' + str(jupyterhub_api_url) + '"');
+            ssh_tunnel_dst_api_port = input('Port: ');
+            if not ssh_tunnel_dst_api_port.isdigit() or int(ssh_tunnel_dst_api_port) > 65535:
+                print('Invalid input! Type in a valid port number.');
+                continue;
+            print('Mapping the JupyterHub API at: 127.0.0.1:' + str(ssh_tunnel_dst_api_port));
+            break;
+        
+        while True:
+            print('To build a SSH tunnel, we need a user on the JupyterHub side. What is his name?');
+            ssh_tunnel_user = input('Username [tunnelbot]: ');
+            if ssh_tunnel_user == '':
+                ssh_tunnel_user = 'tunnelbot';
+                print('Using JupyterHub user: ' + str(ssh_tunnel_user));
+                break;
+            else:
+                print('Using JupyterHub user: ' + str(ssh_tunnel_user));
+                break;
+                
+        while True:
+            print('Where is your private key located so that can I start the SSH tunnel?');
+            ssh_keypath = input('Private SSH key [~/.ssh/id_rsa]: ');
+            if ssh_keypath == '':
+                ssh_keypath = '~/.ssh/id_rsa';
+                print('Private Key: ' + str(ssh_keypath));
+                break;
+            if not os.path.isfile(ssh_keypath):
+                print('WARNING: Private Key file ' + str(ssh_keypath) + ' not found!');
+            print('Private Key: ' + str(ssh_keypath));
+            break;
+
+    ######
+
+    while True:
+        print('Do you want to use Singularity to start your notebook server?');
+        use_singularity = input('Use singularity [y/N]: ');
+        if use_singularity == 'y' or use_singularity == 'Y':
+            use_singularity = 'True';
+            print('Starting notebook server in a singularity container!');
+            break;
+        print('Not using Singularity.');
+        use_singularity = 'False'
+        singularity_container_compute = '';
+        singularity_container_gpu = '';
+        singularity_extra_args = '';
+        singularity_use_overlay = 'False';
+        singularity_overlay_c = '';
+        singularity_overlay_location = '';
+        singularity_overlay_size = '';
+        break;
+
+    if use_singularity == 'True':
+        while True:
+            print('Now I want to know the path of the Singularity container');
+            singularity_container_compute = input('Singularity container (for compute nodes): ');
+            if not os.path.isfile(singularity_container_compute):
+                print(f'WARNING: Cannot find Singularity container {singularity_container_compute}!');
+                print('Maybe you want to build it?');
+
+            print('Singularity container for compute nodes: ' + str(singularity_container_compute));
+            print('Now for the GPU nodes...');
+            singularity_container_gpu = input('Singularity container (for GPU nodes): ');
+            if not os.path.isfile(singularity_container_gpu):
+                print(f'WARNING: Cannot find Singularity container {singularity_container_gpu}!');
+                print('Maybe you want to build it?');
+
+            print('Singularity container for GPU nodes: ' + str(singularity_container_gpu));
+            print('');
+            break;
+
+        print('Do you want to use extra arguments to pass to the singularity call? (--bind, ...)');
+        singularity_extra_args = input('Extra args (comma-seperated): ');
+        print('Extra arguments: ' + str(singularity_extra_args));
+
+        print('Do you want to start your singularity container with an overlay?');
+        singularity_use_overlay = input('Use singularity overlay [y/N]: ');
+        if singularity_use_overlay == 'y' or singularity_use_overlay == 'Y':
+            print('Starting singularity with an overlay!');
+            singularity_use_overlay = 'True';
+        else:
+            print('Do not use Singularity overlays!');
+            singularity_use_overlay = 'False';
+            singularity_overlay_c = '';
+            singularity_overlay_location = '';
+            singularity_overlay_size = '';
+
+        if singularity_use_overlay == 'True':
+            while True:
+                print('I can automatically create a valid Singularity overlay with filename <USERNAME>.img [auto] or you can tell me a Singularity overlay I should use [spec]');
+                singularity_overlay_c = input('Automatically [auto] or Specific [spec] Overlay? [auto]: ');
+                if singularity_overlay_c == '' or singularity_overlay_c == 'auto':
+                    singularity_overlay_c = 'auto';
+                    print('Now I am creating Singularity overlays at starttime for you.');
+                    break;
+                elif singularity_overlay_c == 'spec':
+                    print('Then tell me your overlay, lovely:');
+                    break;
+                else:
+                    print('Choose between "auto" and "spec"!');
+                    continue;
+
+            if singularity_overlay_c == 'auto':
+            
+                print('Please type in the directory where should I save the Singularity overlays. The overlays should be accessible on the compute nodes of course.');
+                singularity_overlay_location = input('Overlay creation directory: ');
+
+                if not os.path.isdir(singularity_overlay_location):
+                    print(f'WARNING: Directory {singularity_overlay_location} does not exists!');
+                print('Using directory: ' + str(singularity_overlay_location));
+
+                while True:
+                    print('What size should the overlays be? (MB)');
+                    singularity_overlay_size = input('Size (MB) [2048]: ');
+                    if singularity_overlay_size == '':
+                        singularity_overlay_size = '2048';
+                        print('Size: 2048MB');
+                        break;
+                    if not singularity_overlay_size.isdigit():
+                        print('Type in a valid number!');
+                        continue;
+                    print(f'Size: {singularity_overlay_size}');
+            else:
+
+                while True:
+                    singularity_overlay_location = input('Your Singularity overlay: ');
+
+                    if singularity_overlay_location == '':
+                        print('Invalid input!');
+                        continue;
+                    if not singularity_overlay_location.os.path.isfile():
+                        print('WARNING: Could not found your Singularity overlay ' + str(singularity_overlay_location));
+                    print('Use overlay: ' + str(singularity_overlay_location));
+                    break;
+
+    # Section: general
+    config['general'] = {
+    'jupyterhub_ip': str(jupyterhub_ip),
+    'jupyterhub_api_url': str(jupyterhub_api_url),
+    'log_file': str(log_file),
+    'log_level': 'INFO'
+    }
+
+    # Section: maintenance
+    config['maintenance'] = {
+    'maintenance': 'False',
+    'maintenance_user': ''
+    }
+
+    # Section: workload_manager
+    config['workload_manager'] = {
+    'cmd_run_job': 'sbatch --parsable',
+    'cmd_run_job_debug': 'sbatch --parsable',
+    'cmd_kill_job': 'scancel $JOBID',
+    'cmd_job_state': 'squeue -ho %%.T -j $JOBID',
+    'cmd_job_get_exec_node': 'squeue -ho %%.B -j $JOBID',
+    'execnode_regex': str(execnode_regex),
+    'job_state_is_running': 'RUNNING, COMPLETING',
+    'job_state_is_stopped': 'COMPLETED',
+    'job_state_is_planned': 'PLANNED, PLANNING'
+    }
+
+    # Section: ssh_config
+    config['ssh_config'] = {
+    'ssh_tunnel_api': str(ssh_tunnel_api),
+    'ssh_tunnel_src_api_port': str(ssh_tunnel_src_api_port),
+    'ssh_tunnel_dst_api_port': str(ssh_tunnel_dst_api_port),
+    'ssh_tunnel_user': str(ssh_tunnel_user),
+    'ssh_keypath': str(ssh_keypath)
+    }
+
+    # Section: singularity
+    config['singularity'] = {
+    'use_singularity': str(use_singularity),
+    'singularity_container_compute': str(singularity_container_compute),
+    'singularity_container_gpu': str(singularity_container_gpu),
+    'singularity_extra_args': str(singularity_extra_args),
+    'singularity_use_overlay': str(singularity_use_overlay),
+    'singularity_overlay_c': str(singularity_overlay_c),
+    'singularity_overlay_location': str(singularity_overlay_location),
+    'singularity_overlay_size': str(singularity_overlay_size)
+    }
+
+    # create temp file and write values
+    create_ini_file();
+
+def main ():
+
+    sureness = input('Are you sure you want to configure your environment with JupyterHub? [y/N]:');
+
+    if sureness == 'y' or sureness == 'Y':
+        get_values();
+    else:
+        screen.refresh();
+        curses.endwin();
+        sys.exit('Exit...');
+
+
+if __name__ == '__main__':
+    main();
