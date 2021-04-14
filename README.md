@@ -170,7 +170,7 @@ Just set `log_level` in the configuration file to 'DEBUG'.
 
 ## Shibboleth Integration
 
-**Work-In-Progress**
+Shibboleth authentication was set up for a JupyterHub server in a test environment. See `./shibboleth/` for an example configuration.
 
 ---
 
