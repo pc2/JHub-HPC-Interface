@@ -127,7 +127,7 @@ class JupyterEnvironment:
             self.jupyterhub_ip = self.config['general']['jupyterhub_ip'];
             self.ssh_keypath = self.config['ssh_config']['ssh_keypath'];
             
-            if not os.path.isfile(str(self.ssh_keypath)):
+            if not os.path.isfile(os.path.expandvars(str(self.ssh_keypath))):
                 self.log.critical(f'Cannot find private SSH key {self.ssh_keypath}!');
                 sys.exit(f'Error: Cannot find private SSH key ({self.ssh_keypath})to make the JupyterHub API available on the compute node');
 

@@ -120,12 +120,13 @@ def get_values ():
                 
         while True:
             print('Where is your private key located so that can I start the SSH tunnel?');
-            ssh_keypath = input('Private SSH key [~/.ssh/id_rsa]: ');
+            ssh_keypath = input('Private SSH key [$HOME/.ssh/id_rsa]: ');
             if ssh_keypath == '':
-                ssh_keypath = '~/.ssh/id_rsa';
-                print('Private Key: ' + str(ssh_keypath));
+                s_ssh_keypath = '$HOME/.ssh/id_rsa';
+                ssh_keypath = '$$HOME/.ssh/id_rsa';
+                print('Private Key: ' + str(s_ssh_keypath));
                 break;
-            if not os.path.isfile(ssh_keypath):
+            if not os.path.isfile(os.path.expandvars(ssh_keypath)):
                 print('WARNING: Private Key file ' + str(ssh_keypath) + ' not found!');
             print('Private Key: ' + str(ssh_keypath));
             break;
