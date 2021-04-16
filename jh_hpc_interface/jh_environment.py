@@ -66,6 +66,7 @@ class JupyterEnvironment:
                     self.build_cmd.append(f'--overlay {spec_overlay}');
                 elif create_overlay == 'auto':
                     username = self.username;
+                    self.build_cmd.append(f'--overlay {spec_overlay}/{username}.img');
                     if not os.path.isfile(f'{spec_overlay}/{username}.img'):
                         overlay_size = self.config['singularity']['singularity_overlay_size'];
                         self.log.info(f'Creating Singularity overlay for user {username}');
@@ -80,7 +81,7 @@ class JupyterEnvironment:
                         except OSError:
                             self.log.critical(f'Cannot create a valid Singularity overlay in directory {overlay_root}!');
                             sys.exit(f'Cannot create a valid Singularity overlay in directory {overlay_root}!');
-                        self.log.debug('Create a ext3 filesystem for user {spec_overlay}/{username}.img');
+                        self.log.debug(f'Create a ext3 filesystem for user {spec_overlay}/{username}.img');
                         ext3_cmd = subprocess.Popen(f'mkfs.ext3 -Fqd {overlay_root} -t ext3 {spec_overlay}/{username}.img', shell=True, stdout=subprocess.DEVNULL);
                         ext3_cmd.wait();
             if not singularity_extra_args == '':
