@@ -35,6 +35,7 @@ The technical core of this project is the transparent integration of digital wor
         - [Compute](#compute)
         - [GPU (Tensorflow)](#gpu-tensorflow)
     - [The configuration file](#the-configuration-file)
+    - [Slurm configuration wizard](#slurm-configuration-wizard)
   - [Examples](#examples)
     - [Debug mode](#debug-mode)
   - [Shibboleth Integration](#shibboleth-integration)
@@ -109,7 +110,7 @@ You can download and install the required files with pip.
 You may want to build a small Python environment, or install the tools with `--user`.
 
 ```bash
-python3 -m pip install --user jh_hpc_interface
+python3 -m pip install --user jh-hpc-interface
 ```
 
 ### Singularity Container
@@ -119,6 +120,8 @@ Singularity recipe examples are in the directory singularity/.
 If you do not want to use singularity, then change the value of `use_singularity` in jh_config.ini to false.
 
 #### Build Singularity Container
+
+To build the container with the recipe files in singularity/ you have to clone this repository.
 
 The following commands replace USER_ID in the recipes to the output of `id -u`, create a new hidden file and build the singularity container with the new created file.
  
@@ -150,6 +153,18 @@ $ jh_wrapper getconfig
 ```
 
 To learn more about the configuration file, see [docs/jh_config.ini.md](docs/jh_config.ini.md)
+
+### Slurm configuration wizard
+
+With the configuration wizard you can prepare your HPC environment.
+
+The script interactively goes through the configuration file and creates a temporary file which can be copied with a simple `cp`.
+
+To start the wizard type the following:
+
+```bash
+$ jh_slurm_wizard
+```
 
 ---
 
