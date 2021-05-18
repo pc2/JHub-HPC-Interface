@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.3] - 18-05-2021
+
+### Debug
+- Set --overlay parameter in singularity command
+- Expand environment variables in configuration file
+
 ## [1.1] - 23-03-2021
 
 ### Added
